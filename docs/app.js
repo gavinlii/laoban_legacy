@@ -1,19 +1,19 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
-const BOT_THINK_MS = 320;
+const BOT_THINK_MS = 190;
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
 const PIP_LAYOUTS = {
-  1: [[50, 50]],
-  2: [[50, 28], [50, 72]],
-  3: [[50, 24], [50, 50], [50, 76]],
-  4: [[32, 28], [68, 28], [32, 72], [68, 72]],
-  5: [[32, 28], [68, 28], [50, 50], [32, 72], [68, 72]],
-  6: [[32, 24], [68, 24], [32, 50], [68, 50], [32, 76], [68, 76]],
-  7: [[32, 22], [68, 22], [50, 36], [32, 50], [68, 50], [32, 78], [68, 78]],
-  8: [[32, 20], [68, 20], [32, 38], [68, 38], [32, 62], [68, 62], [32, 80], [68, 80]],
-  9: [[32, 18], [68, 18], [32, 34], [68, 34], [50, 50], [32, 66], [68, 66], [32, 82], [68, 82]],
-  10:[[32, 18], [68, 18], [32, 33], [68, 33], [32, 48], [68, 48], [32, 63], [68, 63], [32, 78], [68, 78]],
+  1: [[50, 50, 0]],
+  2: [[50, 29, 0], [50, 71, 180]],
+  3: [[50, 24, 0], [50, 50, 0], [50, 76, 180]],
+  4: [[35, 30, 0], [65, 30, 0], [35, 70, 180], [65, 70, 180]],
+  5: [[35, 28, 0], [65, 28, 0], [50, 50, 0], [35, 72, 180], [65, 72, 180]],
+  6: [[35, 25, 0], [65, 25, 0], [35, 50, 0], [65, 50, 0], [35, 75, 180], [65, 75, 180]],
+  7: [[35, 22, 0], [65, 22, 0], [50, 38, 0], [35, 50, 0], [65, 50, 0], [35, 76, 180], [65, 76, 180]],
+  8: [[35, 20, 0], [65, 20, 0], [35, 37, 0], [65, 37, 0], [35, 63, 180], [65, 63, 180], [35, 80, 180], [65, 80, 180]],
+  9: [[35, 18, 0], [65, 18, 0], [35, 34, 0], [65, 34, 0], [50, 50, 0], [35, 66, 180], [65, 66, 180], [35, 82, 180], [65, 82, 180]],
+  10: [[34, 22, 0], [66, 22, 0], [34, 36, 0], [66, 36, 0], [34, 50, 0], [66, 50, 0], [34, 64, 180], [66, 64, 180], [34, 78, 180], [66, 78, 180]],
 };
 
 const state = {
@@ -108,37 +108,27 @@ function displayCard(rawCard) {
   };
 }
 
-function suitPathForSvg(suit) {
-  switch (suit) {
-    case 'H':
-      return 'M0 14 C-8 8 -16 2 -16 -7 C-16 -16 -8 -20 -2 -20 C3 -20 7 -16 8 -13 C9 -16 13 -20 18 -20 C24 -20 32 -16 32 -7 C32 2 24 8 16 14 L8 21 Z';
-    case 'D':
-      return 'M8 -24 L28 0 L8 24 L-12 0 Z';
-    case 'S':
-      return 'M8 -24 C0 -16 -10 -10 -17 -1 C-23 6 -21 18 -9 18 C-3 18 2 14 6 8 L8 6 L10 8 C14 14 19 18 25 18 C37 18 39 6 33 -1 C26 -10 16 -16 8 -24 Z M8 8 L12 22 H4 Z';
-    case 'C':
-      return 'M8 -12 C15 -12 20 -7 20 0 C20 3 19 6 17 9 C20 8 22 8 25 8 C33 8 38 14 38 21 C38 29 31 35 22 35 C16 35 12 32 8 27 C4 32 0 35 -6 35 C-15 35 -22 29 -22 21 C-22 14 -17 8 -9 8 C-6 8 -4 8 -1 9 C-3 6 -4 3 -4 0 C-4 -7 1 -12 8 -12 Z M8 22 L13 40 H3 Z';
-    default:
-      return 'M0 0 L18 18 M18 0 L0 18';
-  }
+function pipLayoutForRank(rank) {
+  if (rank >= 3 && rank <= 10) return PIP_LAYOUTS[rank];
+  if (rank === 14) return PIP_LAYOUTS[1];
+  if (rank === 17) return PIP_LAYOUTS[2];
+  return PIP_LAYOUTS[1];
 }
 
-function pipSvgMarkup(card) {
-  const layout = PIP_LAYOUTS[(card.rank >= 3 && card.rank <= 10) ? card.rank : (card.rank === 14 ? 1 : card.rank === 17 ? 2 : 1)] || PIP_LAYOUTS[1];
-  const path = suitPathForSvg(card.suit);
-  const color = card.colorClass === 'red' ? '#c74343' : '#1c1c1c';
-  const pipScale = card.rank === 10 ? 0.62 : card.rank >= 8 ? 0.66 : 0.72;
+function pipMarkup(rawCard) {
+  const card = displayCard(rawCard);
+  const layout = pipLayoutForRank(card.rank);
   return `
-    <svg class="pip-svg" viewBox="0 0 100 100" aria-hidden="true">
-      ${layout.map(([x, y]) => {
-        const angle = y > 56 ? 180 : 0;
-        return `<g transform="translate(${x} ${y}) rotate(${angle}) scale(${pipScale})"><path d="${path}" fill="${color}" stroke="none"></path></g>`;
-      }).join('')}
-    </svg>
+    <div class="pip-grid ${card.colorClass}">
+      ${layout.map(([x, y, angle]) => `
+        <span class="pip${angle ? ' flipped' : ''}" style="left:${x}%; top:${y}%">${card.suitText}</span>
+      `).join('')}
+    </div>
   `;
 }
 
-function faceMarkup(card) {
+function faceMarkup(rawCard) {
+  const card = displayCard(rawCard);
   const emblem = card.rank === 11 ? '♞' : card.rank === 12 ? '♛' : '♚';
   const jewel = card.rank === 11
     ? '<span class="jewel diamond"></span>'
@@ -159,7 +149,8 @@ function faceMarkup(card) {
   `;
 }
 
-function jokerMarkup(card) {
+function jokerMarkup(rawCard) {
+  const card = displayCard(rawCard);
   const small = card.rank === 20;
   return `
     <div class="art-frame joker-frame ${small ? 'small' : 'big'}">
@@ -168,8 +159,11 @@ function jokerMarkup(card) {
       <div class="frame-wing left"></div>
       <div class="frame-wing right"></div>
       <div class="frame-word top">JOKER</div>
-      <div class="frame-emblem">${small ? '✦' : '✹'}</div>
-      <div class="frame-jewel ${small ? 'diamond' : 'orb'}"></div>
+      <div class="joker-emblem-wrap">
+        <div class="joker-halo"></div>
+        <div class="joker-emblem">${small ? '✦' : '✹'}</div>
+        <div class="joker-jewel ${small ? 'diamond' : 'orb'}"></div>
+      </div>
       <div class="frame-word bottom">${small ? 'SMALL' : 'BIG'}</div>
     </div>
   `;
@@ -179,7 +173,7 @@ function cardCenterMarkup(rawCard) {
   const card = displayCard(rawCard);
   if (card.rank === 20 || card.rank === 30) return jokerMarkup(card);
   if ([11, 12, 13].includes(card.rank)) return faceMarkup(card);
-  return pipSvgMarkup(card);
+  return pipMarkup(card);
 }
 
 function faceDownMarkup() {
@@ -247,8 +241,7 @@ function createCardElement(rawCard, options = {}) {
 function renderStaticDrawPile() {
   if (!els.deckCards) return;
   els.deckCards.innerHTML = '';
-  const offsets = ['offset-a', 'offset-b', 'offset-c'];
-  for (const cls of offsets) {
+  for (const cls of ['offset-a', 'offset-b', 'offset-c']) {
     const card = createFaceDownCard();
     card.classList.add(cls, 'static-draw-card');
     els.deckCards.appendChild(card);
@@ -304,9 +297,17 @@ function renderMoves(payload) {
   }
 }
 
+function blurControls() {
+  if (document.activeElement && typeof document.activeElement.blur === 'function') {
+    document.activeElement.blur();
+  }
+}
+
 function render() {
   const payload = state.payload;
   if (!payload) return;
+
+  renderStaticDrawPile();
 
   const scores = currentScores(payload);
   const playableKeys = new Set(payload.playable_card_keys || []);
@@ -324,10 +325,11 @@ function render() {
   els.humanHand.innerHTML = '';
   for (const rawCard of payload.human_hand || []) {
     const card = displayCard(rawCard);
+    const playable = playableKeys.has(card.key);
     els.humanHand.appendChild(createCardElement(card, {
-      clickable: payload.turn === 'you' && !payload.done && !state.requestInFlight,
-      playable: playableKeys.has(card.key),
-      selected: state.selectedCardKeys.includes(card.key),
+      clickable: payload.turn === 'you' && !payload.done && !state.requestInFlight && playable,
+      playable,
+      selected: playable && state.selectedCardKeys.includes(card.key),
       onClick: () => toggleCard(card.key),
     }));
   }
@@ -369,6 +371,8 @@ function render() {
 function toggleCard(key) {
   const payload = state.payload;
   if (!payload || payload.turn !== 'you' || payload.done || state.requestInFlight) return;
+  const playable = new Set(payload.playable_card_keys || []);
+  if (!playable.has(key)) return;
   if (state.selectedCardKeys.includes(key)) {
     state.selectedCardKeys = state.selectedCardKeys.filter((k) => k !== key);
   } else {
@@ -391,6 +395,7 @@ async function loadHealth() {
 
 async function startNewGame() {
   clearBotDelay();
+  blurControls();
   state.requestInFlight = true;
   render();
   try {
@@ -420,6 +425,7 @@ async function runBotTurn() {
   } finally {
     state.requestInFlight = false;
     state.pendingBotTimeout = null;
+    blurControls();
     render();
   }
 }
@@ -436,6 +442,7 @@ function scheduleBotTurnIfNeeded() {
 async function playAction(actionIndex) {
   if (!state.sessionId || state.requestInFlight) return;
   clearBotDelay();
+  blurControls();
   state.requestInFlight = true;
   render();
   try {
@@ -474,6 +481,7 @@ els.passBtn.addEventListener('click', () => {
 });
 
 els.clearBtn.addEventListener('click', () => {
+  blurControls();
   state.selectedCardKeys = [];
   render();
 });
