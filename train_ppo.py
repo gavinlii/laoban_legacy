@@ -1,4 +1,5 @@
 import argparse
+import csv
 import copy
 import os
 import random
@@ -53,6 +54,9 @@ ENDGAME_REPLAY_MAX_PROB = 0.30
 CHECKPOINT_LATEST = "policy_latest.pt"
 CHECKPOINT_BEST = "policy_best.pt"
 DEFAULT_BASELINE_CHECKPOINT = "policy_latest_bl.pt"
+
+PERF_CSV_PATH = "training_performance.csv"
+PERF_PNG_PATH = "training_performance.png"
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda")
@@ -751,6 +755,56 @@ def maybe_load_exact_baseline(path: Optional[str]):
     return model, meta
 
 
+def make_perf_history():
+    return {
+        "episode": [],
+        "random_wr": [],
+        "baseline_wr": [],
+    }
+
+
+def record_perf_point(history, episode: int, random_wr: float, baseline_wr: float):
+    history["episode"].append(int(episode))
+    history["random_wr"].append(float(random_wr))
+    history["baseline_wr"].append(float(baseline_wr))
+
+
+def save_perf_csv(history, path: str = PERF_CSV_PATH):
+    fields = ["episode", "random_wr", "baseline_wr"]
+    with open(path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(fields)
+        n = len(history["episode"])
+        for i in range(n):
+            writer.writerow([history[k][i] for k in fields])
+
+
+def save_perf_plot(history, path: str = PERF_PNG_PATH):
+    if not history["episode"]:
+        return
+
+    import matplotlib.pyplot as plt
+
+    episodes = np.asarray(history["episode"], dtype=np.int32)
+    random_wr = np.asarray(history["random_wr"], dtype=np.float32)
+    baseline_wr = np.asarray(history["baseline_wr"], dtype=np.float32)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(episodes, random_wr, linewidth=2.2, label="vs random")
+    plt.plot(episodes, baseline_wr, linewidth=2.2, label="vs baseline")
+    plt.xlabel("Episode")
+    plt.ylabel("Win rate")
+    plt.title("Policy performance over training")
+    plt.ylim(0.0, 1.0)
+    if len(episodes) > 1:
+        plt.xlim(int(episodes.min()), int(episodes.max()))
+    plt.grid(True, alpha=0.25)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(path, dpi=180)
+    plt.close()
+
+
 def playtest(checkpoint_path: str = CHECKPOINT_BEST, bot_first: bool = False):
     model, ckpt = load_checkpoint(checkpoint_path)
     human = HumanPlayer()
@@ -814,6 +868,7 @@ def main(init_checkpoint: Optional[str] = None, baseline_checkpoint: Optional[st
         print("No external baseline checkpoint found; using frozen initialization as baseline.", flush=True)
 
     total_decisions = 0
+    perf_history = make_perf_history()
     best_eval_score = float("-inf")
     for ep in range(episodes):
         entropy_coef = max(ENTROPY_END, ENTROPY_START * (0.9985 ** ep))
@@ -861,6 +916,7 @@ def main(init_checkpoint: Optional[str] = None, baseline_checkpoint: Optional[st
             save_checkpoint(model, state_dim, action_dim, ep, CHECKPOINT_LATEST)
             wr_r = evaluate_random(model)
             eval_stats = pool.last_eval
+            record_perf_point(perf_history, ep, wr_r, eval_stats["baseline_wr"])
             score = composite_eval_score(wr_r, eval_stats)
             if score > best_eval_score:
                 save_checkpoint(model, state_dim, action_dim, ep, CHECKPOINT_BEST)
@@ -876,6 +932,17 @@ def main(init_checkpoint: Optional[str] = None, baseline_checkpoint: Optional[st
             print(f"Opponent mix: {mix}", flush=True)
 
     save_checkpoint(model, state_dim, action_dim, episodes - 1, CHECKPOINT_LATEST)
+
+    final_ep = max(0, episodes - 1)
+    if not perf_history["episode"] or perf_history["episode"][-1] != final_ep:
+        final_eval_stats = refresh_pool_stats(model, pool)
+        final_wr_r = evaluate_random(model)
+        record_perf_point(perf_history, final_ep, final_wr_r, final_eval_stats["baseline_wr"])
+
+    save_perf_csv(perf_history, PERF_CSV_PATH)
+    save_perf_plot(perf_history, PERF_PNG_PATH)
+    print(f"Saved training performance history -> {PERF_CSV_PATH}", flush=True)
+    print(f"Saved training performance plot -> {PERF_PNG_PATH}", flush=True)
 
 
 def parse_train_args(argv: List[str]):
