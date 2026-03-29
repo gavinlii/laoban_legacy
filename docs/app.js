@@ -19,7 +19,7 @@ const RULE_SLIDES = [
   {
     title: 'Welcome',
     body: [
-      'This game is about timing, tempo, and collecting point cards. You are trying to finish with more points than the bot.',
+      'This game is about timing, tempo, and collecting point cards. You\'re trying to finish with more points than the bot.',
     ],
   },
   {
@@ -32,7 +32,7 @@ const RULE_SLIDES = [
   {
     title: 'How a hand works',
     body: [
-      'Players contest one hand at a time. Once a player plays their first card(s), all replies in the hand must be the same type and stronger - unless you use a bomb. A single 9 beats a single 7; a single J can\'t beat a pair of 8s. 3s are the lowest, Kings, Aces, and 2s are the highest.',
+      'Players contest one hand at a time. Once a player plays their first card(s), all replies in the hand must be the same type and stronger - unless you use a bomb. A single 9 beats a single 7; a single J can\'t beat a pair of 8s. 3s are lowest, Kings, Aces, 2s, and Jokers are highest.',
       'In this implementation, a single PASS ends the hand immediately. You can pass at anytime except when you start a hand. The last player who successfully played wins the pot and leads the next hand.',
     ],
   },
@@ -47,7 +47,7 @@ const RULE_SLIDES = [
     title: 'Bombs',
     body: [
       'Bombs can be played at any time and beat all ordinary (non-bomb) plays. Stronger bombs can beat weaker bombs.',
-      'Bomb order here is: 5-10-K, mixed suits < suited 5-10-K < four-of-a-kind < both jokers.',
+      'Bomb order is: 5-10-K (mixed suits) < 5-10-K (suited) < four-of-a-kind < both jokers.',
     ],
   },
   {
@@ -61,7 +61,7 @@ const RULE_SLIDES = [
   {
     title: 'Practical beginner advice',
     body: [
-      'Do not spend bombs casually. They are your emergency brake, tempo reset, and point-stealing tool all at once.',
+      'Don\'t spend bombs casually. They are your emergency brake, tempo reset, and point-stealing tool all at once.',
       'Track 5s, 10s, Kings, and 2s. Winning a hand at the right time can swing the game much more than just shedding cards quickly.',
     ],
   },
