@@ -33,7 +33,7 @@ const RULE_SLIDES = [
     title: 'How a hand works',
     body: [
       'Players contest one hand at a time. Once a player plays their first card(s), all replies in the hand must be the same type and stronger - unless you use a bomb. A single 9 beats a single 7; a single J can\'t beat a pair of 8s. 3s are lowest, Kings, Aces, 2s, and Jokers are highest.',
-      'In this implementation, a single PASS ends the hand immediately. You can pass at anytime except when you start a hand. The last player who successfully played wins the pot and leads the next hand.',
+      'A single PASS ends the hand immediately. You can pass at anytime except when you start a hand. The last player who successfully played wins the pot and leads the next hand.',
     ],
   },
   {
