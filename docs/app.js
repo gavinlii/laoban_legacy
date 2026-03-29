@@ -15,6 +15,58 @@ const NUMBER_LAYOUTS = {
   9: [[40, 44, 0], [60, 44, 0], [40, 59, 0], [60, 59, 0], [50, 73, 0], [40, 83, 180], [60, 83, 180], [40, 98, 180], [60, 98, 180]],
   10: [[40, 43, 0], [60, 43, 0], [40, 57, 0], [60, 57, 0], [40, 72, 0], [60, 72, 0], [40, 86, 180], [60, 86, 180], [40, 100, 180], [60, 100, 180]],
 };
+const RULE_SLIDES = [
+  {
+    title: 'Welcome to 5/10/K',
+    body: [
+      'This game is about timing, tempo, and collecting point cards. You are trying to finish with more points than the bot.',
+      'Heads up: on a cold start, the backend may take up to about a minute to spin up. Once it wakes up, reloads are much faster.',
+    ],
+  },
+  {
+    title: 'Where the points come from',
+    body: [
+      'Only a few cards are worth points: each 5 is worth 5 points, each 10 is worth 10 points, and each K is worth 10 points.',
+      'When cards are played into the current hand, those point cards go into the pot. The winner of that hand takes the pot.',
+    ],
+  },
+  {
+    title: 'How a hand works',
+    body: [
+      'Players contest one hand at a time. Once a type is led, the reply must be the same type and stronger, unless you use a bomb.',
+      'In this implementation, a single pass ends the hand immediately. The last player who successfully led wins the pot and leads the next hand.',
+    ],
+  },
+  {
+    title: 'Legal plays',
+    body: [
+      'Normal plays are singles, pairs, triples, and exactly 5-card straights.',
+      'A higher play of the same type beats a lower one. Straights must stay length 5 and be higher than the previous straight.',
+    ],
+  },
+  {
+    title: 'Bombs',
+    body: [
+      'Bombs can beat ordinary plays and stronger bombs can beat weaker bombs.',
+      'Bomb order here is: mixed 5-10-K bomb < suited 5-10-K bomb < four-of-a-kind bomb < joker bomb.',
+    ],
+  },
+  {
+    title: 'Drawing and the endgame',
+    body: [
+      'After each hand, the winner draws first and players refill back up to 5 cards while the deck lasts.',
+      'When the deck is empty, emptying your hand ends the game: you get a +20 bonus and your opponent loses the point value of cards left in hand.',
+    ],
+  },
+  {
+    title: 'Practical beginner advice',
+    body: [
+      'Do not spend bombs casually. They are your emergency brake, tempo reset, and point-steal tool all at once.',
+      'Track 5s, 10s, and Kings. Winning a small-looking hand at the right time can swing the game much more than just shedding cards quickly.',
+    ],
+  },
+];
+
 
 const state = {
   sessionId: null,
@@ -22,6 +74,7 @@ const state = {
   selectedCardKeys: [],
   pendingBotTimeout: null,
   requestInFlight: false,
+  introSlideIndex: 0,
 };
 
 const els = {
@@ -47,6 +100,91 @@ const els = {
   deckCards: document.querySelector('.deck-cards'),
 };
 
+
+function setWaitingForBackend(isWaiting) {
+  if (!els.selection) return;
+  if (isWaiting) {
+    els.selection.textContent = 'Waiting for backend…';
+    els.selection.classList.add('waiting-backend');
+  } else if (els.selection.classList.contains('waiting-backend')) {
+    els.selection.textContent = '';
+    els.selection.classList.remove('waiting-backend');
+  }
+}
+
+function ensureIntroOverlay() {
+  if (document.getElementById('intro-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'intro-overlay';
+  overlay.className = 'intro-overlay';
+  overlay.innerHTML = `
+    <div class="intro-backdrop"></div>
+    <div class="intro-modal" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+      <button type="button" class="intro-close" aria-label="Close rules popup">×</button>
+      <div class="intro-topnote">
+        <div class="intro-topnote-title">Before you start</div>
+        <div class="intro-topnote-body">The backend may need up to a minute to spin up after inactivity. If the page seems idle on first load, that is usually why.</div>
+      </div>
+      <div class="intro-slides">
+        <div class="intro-slide-counter"></div>
+        <h2 id="intro-title" class="intro-title"></h2>
+        <div class="intro-body"></div>
+      </div>
+      <div class="intro-controls">
+        <button type="button" class="intro-nav intro-prev secondary">Back</button>
+        <div class="intro-dots" aria-hidden="true"></div>
+        <button type="button" class="intro-nav intro-next">Next</button>
+      </div>
+      <div class="intro-footer">
+        <button type="button" class="intro-gotit">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('.intro-close').addEventListener('click', closeIntroOverlay);
+  overlay.querySelector('.intro-gotit').addEventListener('click', closeIntroOverlay);
+  overlay.querySelector('.intro-prev').addEventListener('click', () => {
+    state.introSlideIndex = Math.max(0, state.introSlideIndex - 1);
+    renderIntroSlide();
+  });
+  overlay.querySelector('.intro-next').addEventListener('click', () => {
+    state.introSlideIndex = Math.min(RULE_SLIDES.length - 1, state.introSlideIndex + 1);
+    renderIntroSlide();
+  });
+
+  renderIntroSlide();
+}
+
+function renderIntroSlide() {
+  const overlay = document.getElementById('intro-overlay');
+  if (!overlay) return;
+
+  const slide = RULE_SLIDES[state.introSlideIndex];
+  overlay.querySelector('.intro-slide-counter').textContent = `Slide ${state.introSlideIndex + 1} / ${RULE_SLIDES.length}`;
+  overlay.querySelector('.intro-title').textContent = slide.title;
+  overlay.querySelector('.intro-body').innerHTML = slide.body.map((line) => `<p>${line}</p>`).join('');
+
+  const dots = overlay.querySelector('.intro-dots');
+  dots.innerHTML = RULE_SLIDES.map((_, idx) =>
+    `<button type="button" class="intro-dot${idx === state.introSlideIndex ? ' active' : ''}" data-slide="${idx}" aria-label="Go to slide ${idx + 1}"></button>`
+  ).join('');
+  dots.querySelectorAll('.intro-dot').forEach((dot) => {
+    dot.addEventListener('click', () => {
+      state.introSlideIndex = Number(dot.dataset.slide);
+      renderIntroSlide();
+    });
+  });
+
+  overlay.querySelector('.intro-prev').disabled = state.introSlideIndex === 0;
+  overlay.querySelector('.intro-next').disabled = state.introSlideIndex === RULE_SLIDES.length - 1;
+}
+
+function closeIntroOverlay() {
+  const overlay = document.getElementById('intro-overlay');
+  if (overlay) overlay.remove();
+}
 function endpoint(path) {
   return `${API_BASE}${path}`;
 }
@@ -348,6 +486,7 @@ function render() {
   const payload = state.payload;
   if (!payload) return;
 
+  setWaitingForBackend(false);
   renderStaticDrawPile();
 
   const scores = currentScores(payload);
@@ -526,6 +665,8 @@ els.clearBtn.addEventListener('click', () => {
 
 (function initDrawPile() {
   renderStaticDrawPile();
+  setWaitingForBackend(true);
+  ensureIntroOverlay();
 })();
 
 (async function init() {
