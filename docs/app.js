@@ -1,20 +1,19 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
-const BOT_THINK_MS = 650;
+const BOT_THINK_MS = 320;
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
-const PIP_COUNTS = {3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10, 14: 1, 17: 2};
 const PIP_LAYOUTS = {
-  1: [[50, 50, 0]],
-  2: [[50, 30, 0], [50, 70, 180]],
-  3: [[50, 24, 0], [50, 50, 0], [50, 76, 180]],
-  4: [[35, 30, 0], [65, 30, 0], [35, 70, 180], [65, 70, 180]],
-  5: [[35, 28, 0], [65, 28, 0], [50, 50, 0], [35, 72, 180], [65, 72, 180]],
-  6: [[35, 25, 0], [65, 25, 0], [35, 50, 0], [65, 50, 0], [35, 75, 180], [65, 75, 180]],
-  7: [[35, 22, 0], [65, 22, 0], [50, 38, 0], [35, 50, 0], [65, 50, 0], [35, 76, 180], [65, 76, 180]],
-  8: [[35, 20, 0], [65, 20, 0], [35, 37, 0], [65, 37, 0], [35, 63, 180], [65, 63, 180], [35, 80, 180], [65, 80, 180]],
-  9: [[35, 18, 0], [65, 18, 0], [35, 34, 0], [65, 34, 0], [50, 50, 0], [35, 66, 180], [65, 66, 180], [35, 82, 180], [65, 82, 180]],
-  10: [[34, 22, 0], [66, 22, 0], [34, 36, 0], [66, 36, 0], [34, 50, 0], [66, 50, 0], [34, 64, 180], [66, 64, 180], [34, 78, 180], [66, 78, 180]],
+  1: [[50, 50]],
+  2: [[50, 28], [50, 72]],
+  3: [[50, 24], [50, 50], [50, 76]],
+  4: [[32, 28], [68, 28], [32, 72], [68, 72]],
+  5: [[32, 28], [68, 28], [50, 50], [32, 72], [68, 72]],
+  6: [[32, 24], [68, 24], [32, 50], [68, 50], [32, 76], [68, 76]],
+  7: [[32, 22], [68, 22], [50, 36], [32, 50], [68, 50], [32, 78], [68, 78]],
+  8: [[32, 20], [68, 20], [32, 38], [68, 38], [32, 62], [68, 62], [32, 80], [68, 80]],
+  9: [[32, 18], [68, 18], [32, 34], [68, 34], [50, 50], [32, 66], [68, 66], [32, 82], [68, 82]],
+  10:[[32, 18], [68, 18], [32, 33], [68, 33], [32, 48], [68, 48], [32, 63], [68, 63], [32, 78], [68, 78]],
 };
 
 const state = {
@@ -45,6 +44,7 @@ const els = {
   clearBtn: document.getElementById('clear-btn'),
   newGameBtn: document.getElementById('new-game-btn'),
   startingPlayer: document.getElementById('starting-player'),
+  deckCards: document.querySelector('.deck-cards'),
 };
 
 function endpoint(path) {
@@ -108,17 +108,33 @@ function displayCard(rawCard) {
   };
 }
 
-function pipMarkup(card) {
-  const count = PIP_COUNTS[card.rank] || 1;
-  const layout = PIP_LAYOUTS[count] || PIP_LAYOUTS[1];
-  const pip = card.suitText || '•';
-  const sizeClass = count >= 10 ? 'mini' : count >= 8 ? 'tight' : '';
+function suitPathForSvg(suit) {
+  switch (suit) {
+    case 'H':
+      return 'M0 14 C-8 8 -16 2 -16 -7 C-16 -16 -8 -20 -2 -20 C3 -20 7 -16 8 -13 C9 -16 13 -20 18 -20 C24 -20 32 -16 32 -7 C32 2 24 8 16 14 L8 21 Z';
+    case 'D':
+      return 'M8 -24 L28 0 L8 24 L-12 0 Z';
+    case 'S':
+      return 'M8 -24 C0 -16 -10 -10 -17 -1 C-23 6 -21 18 -9 18 C-3 18 2 14 6 8 L8 6 L10 8 C14 14 19 18 25 18 C37 18 39 6 33 -1 C26 -10 16 -16 8 -24 Z M8 8 L12 22 H4 Z';
+    case 'C':
+      return 'M8 -12 C15 -12 20 -7 20 0 C20 3 19 6 17 9 C20 8 22 8 25 8 C33 8 38 14 38 21 C38 29 31 35 22 35 C16 35 12 32 8 27 C4 32 0 35 -6 35 C-15 35 -22 29 -22 21 C-22 14 -17 8 -9 8 C-6 8 -4 8 -1 9 C-3 6 -4 3 -4 0 C-4 -7 1 -12 8 -12 Z M8 22 L13 40 H3 Z';
+    default:
+      return 'M0 0 L18 18 M18 0 L0 18';
+  }
+}
+
+function pipSvgMarkup(card) {
+  const layout = PIP_LAYOUTS[(card.rank >= 3 && card.rank <= 10) ? card.rank : (card.rank === 14 ? 1 : card.rank === 17 ? 2 : 1)] || PIP_LAYOUTS[1];
+  const path = suitPathForSvg(card.suit);
+  const color = card.colorClass === 'red' ? '#c74343' : '#1c1c1c';
+  const pipScale = card.rank === 10 ? 0.62 : card.rank >= 8 ? 0.66 : 0.72;
   return `
-    <div class="pip-field ${sizeClass}">
-      ${layout.map(([x, y, angle]) => `
-        <span class="pip" style="left:${x}%; top:${y}%; transform: translate(-50%, -50%) rotate(${angle}deg);">${pip}</span>
-      `).join('')}
-    </div>
+    <svg class="pip-svg" viewBox="0 0 100 100" aria-hidden="true">
+      ${layout.map(([x, y]) => {
+        const angle = y > 56 ? 180 : 0;
+        return `<g transform="translate(${x} ${y}) rotate(${angle}) scale(${pipScale})"><path d="${path}" fill="${color}" stroke="none"></path></g>`;
+      }).join('')}
+    </svg>
   `;
 }
 
@@ -163,22 +179,28 @@ function cardCenterMarkup(rawCard) {
   const card = displayCard(rawCard);
   if (card.rank === 20 || card.rank === 30) return jokerMarkup(card);
   if ([11, 12, 13].includes(card.rank)) return faceMarkup(card);
-  return pipMarkup(card);
+  return pipSvgMarkup(card);
 }
 
-function createFaceDownCard() {
-  const el = document.createElement('div');
-  el.className = 'card-shell back';
-  el.innerHTML = `
+function faceDownMarkup() {
+  return `
     <div class="card-shadow"></div>
     <div class="card-back-outer">
       <div class="card-back-inner">
-        <div class="back-bars"></div>
+        <div class="back-bar left"></div>
+        <div class="back-bar center"></div>
+        <div class="back-bar right"></div>
         <div class="back-badge top">♠ ♥ ♣ ♦</div>
         <div class="back-badge bottom">5 · 10 · K</div>
       </div>
     </div>
   `;
+}
+
+function createFaceDownCard() {
+  const el = document.createElement('div');
+  el.className = 'card-shell back';
+  el.innerHTML = faceDownMarkup();
   return el;
 }
 
@@ -220,6 +242,17 @@ function createCardElement(rawCard, options = {}) {
     wrapper.addEventListener('click', options.onClick);
   }
   return wrapper;
+}
+
+function renderStaticDrawPile() {
+  if (!els.deckCards) return;
+  els.deckCards.innerHTML = '';
+  const offsets = ['offset-a', 'offset-b', 'offset-c'];
+  for (const cls of offsets) {
+    const card = createFaceDownCard();
+    card.classList.add(cls, 'static-draw-card');
+    els.deckCards.appendChild(card);
+  }
 }
 
 function clearBotDelay() {
@@ -444,6 +477,10 @@ els.clearBtn.addEventListener('click', () => {
   state.selectedCardKeys = [];
   render();
 });
+
+(function initDrawPile() {
+  renderStaticDrawPile();
+})();
 
 (async function init() {
   try {
