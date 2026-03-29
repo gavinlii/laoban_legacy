@@ -8,7 +8,7 @@ const BACK_SUITS = ['♠', '♥', '♣', '♦'];
 const NUMBER_LAYOUTS = {
   3: [[50, 51, 0], [50, 73, 0], [50, 95, 180]],
   4: [[40, 52, 0], [60, 52, 0], [40, 86, 180], [60, 86, 180]],
-  5: [[40, 52, 0], [60, 52, 0], [50, 69, 0], [40, 86, 180], [60, 86, 180]],
+  5: [[40, 52, 0], [60, 52, 0], [50, 74, 0], [40, 86, 180], [60, 86, 180]],
   6: [[40, 48, 0], [60, 48, 0], [40, 72, 0], [60, 72, 0], [40, 96, 180], [60, 96, 180]],
   7: [[40, 47, 0], [60, 47, 0], [50, 62, 0], [40, 72, 0], [60, 72, 0], [40, 97, 180], [60, 97, 180]],
   8: [[40, 45, 0], [60, 45, 0], [40, 61, 0], [60, 61, 0], [40, 80, 180], [60, 80, 180], [40, 96, 180], [60, 96, 180]],
@@ -121,7 +121,6 @@ function ensureIntroOverlay() {
   overlay.innerHTML = `
     <div class="intro-backdrop"></div>
     <div class="intro-modal" role="dialog" aria-modal="true" aria-labelledby="intro-title">
-      <button type="button" class="intro-close" aria-label="Close rules popup">×</button>
       <div class="intro-topnote">
         <div class="intro-topnote-title">Before you start</div>
         <div class="intro-topnote-body">The backend may need up to a minute to spin up after inactivity. If the page seems idle on first load, that is usually why.</div>
@@ -143,7 +142,6 @@ function ensureIntroOverlay() {
   `;
   document.body.appendChild(overlay);
 
-  overlay.querySelector('.intro-close').addEventListener('click', closeIntroOverlay);
   overlay.querySelector('.intro-gotit').addEventListener('click', closeIntroOverlay);
   overlay.querySelector('.intro-prev').addEventListener('click', () => {
     state.introSlideIndex = Math.max(0, state.introSlideIndex - 1);
@@ -183,7 +181,11 @@ function renderIntroSlide() {
 
 function closeIntroOverlay() {
   const overlay = document.getElementById('intro-overlay');
-  if (overlay) overlay.remove();
+  if (!overlay || overlay.classList.contains('closing')) return;
+  overlay.classList.add('closing');
+  window.setTimeout(() => {
+    overlay.remove();
+  }, 180);
 }
 function endpoint(path) {
   return `${API_BASE}${path}`;
