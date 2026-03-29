@@ -17,14 +17,13 @@ const NUMBER_LAYOUTS = {
 };
 const RULE_SLIDES = [
   {
-    title: 'Welcome to 5/10/K',
+    title: 'Welcome',
     body: [
       'This game is about timing, tempo, and collecting point cards. You are trying to finish with more points than the bot.',
-      'Heads up: on a cold start, the backend may take up to about a minute to spin up. Once it wakes up, reloads are much faster.',
     ],
   },
   {
-    title: 'Where the points come from',
+    title: 'Where points come from',
     body: [
       'Only a few cards are worth points: each 5 is worth 5 points, each 10 is worth 10 points, and each K is worth 10 points.',
       'When cards are played into the current hand, those point cards go into the pot. The winner of that hand takes the pot.',
@@ -33,36 +32,37 @@ const RULE_SLIDES = [
   {
     title: 'How a hand works',
     body: [
-      'Players contest one hand at a time. Once a type is led, the reply must be the same type and stronger, unless you use a bomb.',
-      'In this implementation, a single pass ends the hand immediately. The last player who successfully led wins the pot and leads the next hand.',
+      'Players contest one hand at a time. Once a player plays their first card(s), all replies in the hand must be the same type and stronger - unless you use a bomb. A single 9 beats a single 7; a single J can\'t beat a pair of 8s. 3s are the lowest, Kings, Aces, and 2s are the highest.',
+      'In this implementation, a single PASS ends the hand immediately. You can pass at anytime except when you start a hand. The last player who successfully played wins the pot and leads the next hand.',
     ],
   },
   {
     title: 'Legal plays',
     body: [
-      'Normal plays are singles, pairs, triples, and exactly 5-card straights.',
+      'Normal plays are singles, pairs, triples, and 5-card straights.',
       'A higher play of the same type beats a lower one. Straights must stay length 5 and be higher than the previous straight.',
     ],
   },
   {
     title: 'Bombs',
     body: [
-      'Bombs can beat ordinary plays and stronger bombs can beat weaker bombs.',
-      'Bomb order here is: mixed 5-10-K bomb < suited 5-10-K bomb < four-of-a-kind bomb < joker bomb.',
+      'Bombs can be played at any time and beat all ordinary (non-bomb) plays. Stronger bombs can beat weaker bombs.',
+      'Bomb order here is: 5-10-K, mixed suits < suited 5-10-K < four-of-a-kind < both jokers.',
     ],
   },
   {
     title: 'Drawing and the endgame',
     body: [
       'After each hand, the winner draws first and players refill back up to 5 cards while the deck lasts.',
-      'When the deck is empty, emptying your hand ends the game: you get a +20 bonus and your opponent loses the point value of cards left in hand.',
+      'When the deck is empty, the player who empties their hand first gains an additional 20 points, and all remaining points in the other player\'s hand are subtracted from their total.',
+      'The player with the most points at the end wins.'
     ],
   },
   {
     title: 'Practical beginner advice',
     body: [
-      'Do not spend bombs casually. They are your emergency brake, tempo reset, and point-steal tool all at once.',
-      'Track 5s, 10s, and Kings. Winning a small-looking hand at the right time can swing the game much more than just shedding cards quickly.',
+      'Do not spend bombs casually. They are your emergency brake, tempo reset, and point-stealing tool all at once.',
+      'Track 5s, 10s, Kings, and 2s. Winning a hand at the right time can swing the game much more than just shedding cards quickly.',
     ],
   },
 ];
