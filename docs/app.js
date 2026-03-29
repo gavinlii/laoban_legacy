@@ -1,19 +1,19 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
-const BOT_THINK_MS = 240;
+const BOT_THINK_MS = 440;
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
 const SUIT_COLORS = {H: '#c74343', D: '#c74343', C: '#1c1c1c', S: '#1c1c1c'};
 const BACK_SUITS = ['♠', '♥', '♣', '♦'];
 const NUMBER_LAYOUTS = {
-  3: [[50, 42], [50, 64], [50, 86]],
-  4: [[39, 43], [61, 43], [39, 77], [61, 77]],
-  5: [[39, 43], [61, 43], [50, 64], [39, 77], [61, 77]],
-  6: [[39, 39], [61, 39], [39, 63], [61, 63], [39, 87], [61, 87]],
-  7: [[39, 38], [61, 38], [50, 53], [39, 63], [61, 63], [39, 88], [61, 88]],
-  8: [[39, 36], [61, 36], [39, 52], [61, 52], [39, 71], [61, 71], [39, 87], [61, 87]],
-  9: [[39, 35], [61, 35], [39, 50], [61, 50], [50, 64], [39, 74], [61, 74], [39, 89], [61, 89]],
-  10: [[39, 34], [61, 34], [39, 48], [61, 48], [39, 63], [61, 63], [39, 77], [61, 77], [39, 91], [61, 91]],
+  3: [[50, 49], [50, 71], [50, 93]],
+  4: [[39, 50], [61, 50], [39, 84], [61, 84]],
+  5: [[39, 50], [61, 50], [50, 71], [39, 84], [61, 84]],
+  6: [[39, 46], [61, 46], [39, 70], [61, 70], [39, 94], [61, 94]],
+  7: [[39, 45], [61, 45], [50, 60], [39, 70], [61, 70], [39, 95], [61, 95]],
+  8: [[39, 43], [61, 43], [39, 59], [61, 59], [39, 78], [61, 78], [39, 94], [61, 94]],
+  9: [[39, 42], [61, 42], [39, 57], [61, 57], [50, 71], [39, 81], [61, 81], [39, 96], [61, 96]],
+  10: [[39, 41], [61, 41], [39, 55], [61, 55], [39, 70], [61, 70], [39, 84], [61, 84], [39, 98], [61, 98]],
 };
 
 const state = {
@@ -164,10 +164,10 @@ function pipSvg(card, x, y, size, rotate = 0) {
 function pipFieldSvg(card) {
   const rank = card.rank;
   if (rank === 14) {
-    return pipSvg(card, 50, 78, 26, 0);
+    return pipSvg(card, 50, 85, 26, 0);
   }
   if (rank === 17) {
-    return `${pipSvg(card, 50, 46, 16, 0)}${pipSvg(card, 50, 106, 16, 180)}`;
+    return `${pipSvg(card, 50, 53, 16, 0)}${pipSvg(card, 50, 113, 16, 180)}`;
   }
   const layout = NUMBER_LAYOUTS[rank] || [[50, 55]];
   return layout.map(([x, y]) => pipSvg(card, x, y, 15, y > 55 ? 180 : 0)).join('');
@@ -318,7 +318,7 @@ function renderMoves(payload) {
   if (!legalActions.length) {
     const move = document.createElement('div');
     move.className = 'move disabled';
-    move.textContent = payload.done ? 'Game over' : (payload.pending_bot_turn ? 'Bot is thinking…' : 'Waiting for bot…');
+    move.textContent = payload.done ? 'Game over' : (payload.pending_bot_turn ? '' : 'Waiting for bot…');
     els.moves.appendChild(move);
     return;
   }
@@ -360,7 +360,7 @@ function render() {
   els.opponentStatus.textContent = `Cards in hand: ${payload.opponent_card_count}`;
   els.lastMove.textContent = `Last move: ${payload.last_move ? payload.last_move.label : 'None'}`;
   els.result.textContent = payload.result || '';
-  els.selection.textContent = payload.pending_bot_turn ? 'Bot is thinking…' : selectedMoveText();
+  els.selection.textContent = payload.pending_bot_turn ? '' : selectedMoveText();
   els.log.textContent = (payload.log || []).join('\n');
 
   els.humanHand.innerHTML = '';
