@@ -1,19 +1,19 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
-const BOT_THINK_MS = 190;
+const BOT_THINK_MS = 120;
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
-const PIP_LAYOUTS = {
-  1: [[50, 50, 0]],
-  2: [[50, 29, 0], [50, 71, 180]],
-  3: [[50, 24, 0], [50, 50, 0], [50, 76, 180]],
-  4: [[35, 30, 0], [65, 30, 0], [35, 70, 180], [65, 70, 180]],
-  5: [[35, 28, 0], [65, 28, 0], [50, 50, 0], [35, 72, 180], [65, 72, 180]],
-  6: [[35, 25, 0], [65, 25, 0], [35, 50, 0], [65, 50, 0], [35, 75, 180], [65, 75, 180]],
-  7: [[35, 22, 0], [65, 22, 0], [50, 38, 0], [35, 50, 0], [65, 50, 0], [35, 76, 180], [65, 76, 180]],
-  8: [[35, 20, 0], [65, 20, 0], [35, 37, 0], [65, 37, 0], [35, 63, 180], [65, 63, 180], [35, 80, 180], [65, 80, 180]],
-  9: [[35, 18, 0], [65, 18, 0], [35, 34, 0], [65, 34, 0], [50, 50, 0], [35, 66, 180], [65, 66, 180], [35, 82, 180], [65, 82, 180]],
-  10: [[34, 22, 0], [66, 22, 0], [34, 36, 0], [66, 36, 0], [34, 50, 0], [66, 50, 0], [34, 64, 180], [66, 64, 180], [34, 78, 180], [66, 78, 180]],
+const SUIT_COLORS = {H: '#c74343', D: '#c74343', C: '#1c1c1c', S: '#1c1c1c'};
+const BACK_SUITS = ['♠', '♥', '♣', '♦'];
+const NUMBER_LAYOUTS = {
+  3: [[50, 28], [50, 50], [50, 72]],
+  4: [[34, 31], [66, 31], [34, 69], [66, 69]],
+  5: [[34, 31], [66, 31], [50, 50], [34, 69], [66, 69]],
+  6: [[34, 26], [66, 26], [34, 50], [66, 50], [34, 74], [66, 74]],
+  7: [[34, 24], [66, 24], [50, 38], [34, 50], [66, 50], [34, 76], [66, 76]],
+  8: [[34, 22], [66, 22], [34, 40], [66, 40], [34, 60], [66, 60], [34, 78], [66, 78]],
+  9: [[34, 22], [66, 22], [34, 38], [66, 38], [50, 50], [34, 62], [66, 62], [34, 78], [66, 78]],
+  10: [[34, 20], [66, 20], [34, 34], [66, 34], [34, 48], [66, 48], [34, 62], [66, 62], [34, 76], [66, 76]],
 };
 
 const state = {
@@ -55,7 +55,7 @@ function rankText(rank) {
   return RANK_LABELS[rank] || String(rank);
 }
 
-function suitSymbol(suit) {
+function suitText(suit) {
   return SUIT_SYMBOLS[suit] || '';
 }
 
@@ -69,6 +69,16 @@ function currentScores(payload) {
     you: scores.you ?? 0,
     bot: scores.bot ?? 0,
     pot: scores.pot ?? payload.pot ?? 0,
+  };
+}
+
+function displayCard(rawCard) {
+  return {
+    ...rawCard,
+    rankLabel: rawCard.rank_label || rankText(rawCard.rank),
+    suitText: rawCard.suit_symbol || suitText(rawCard.suit),
+    suitFill: SUIT_COLORS[rawCard.suit] || '#1c1c1c',
+    colorClass: suitColor(rawCard),
   };
 }
 
@@ -99,102 +109,142 @@ function selectedMoveText() {
   return 'Selected cards do not form a legal move.';
 }
 
-function displayCard(rawCard) {
-  return {
-    ...rawCard,
-    rankLabel: rawCard.rank_label || rankText(rawCard.rank),
-    suitText: rawCard.suit_symbol || suitSymbol(rawCard.suit),
-    colorClass: suitColor(rawCard),
-  };
+function svgText({ x, y, text, fill, size, weight = 700, anchor = 'middle', rotate = null, family = 'Trebuchet MS, Segoe UI, sans-serif', baseline = 'middle', letterSpacing = null }) {
+  const attrs = [
+    `x="${x}"`,
+    `y="${y}"`,
+    `fill="${fill}"`,
+    `font-size="${size}"`,
+    `font-weight="${weight}"`,
+    `font-family="${family}"`,
+    `text-anchor="${anchor}"`,
+    `dominant-baseline="${baseline}"`,
+  ];
+  if (rotate !== null) attrs.push(`transform="rotate(${rotate} ${x} ${y})"`);
+  if (letterSpacing !== null) attrs.push(`letter-spacing="${letterSpacing}"`);
+  return `<text ${attrs.join(' ')}>${text}</text>`;
 }
 
-function pipLayoutForRank(rank) {
-  if (rank >= 3 && rank <= 10) return PIP_LAYOUTS[rank];
-  if (rank === 14) return PIP_LAYOUTS[1];
-  if (rank === 17) return PIP_LAYOUTS[2];
-  return PIP_LAYOUTS[1];
+function polygonPoints(inset = 0) {
+  const i = inset;
+  return `${12 + i},${i} ${88 - i},${i} ${100 - i},${12 + i} ${100 - i},${128 - i} ${88 - i},${140 - i} ${12 + i},${140 - i} ${i},${128 - i} ${i},${12 + i}`;
 }
 
-function pipMarkup(rawCard) {
-  const card = displayCard(rawCard);
-  const layout = pipLayoutForRank(card.rank);
+function frontBaseSvg(card) {
+  const topIcon = card.suitText || '★';
+  const topColor = card.suitText ? card.suitFill : '#b88928';
   return `
-    <div class="pip-grid ${card.colorClass}">
-      ${layout.map(([x, y, angle]) => `
-        <span class="pip${angle ? ' flipped' : ''}" style="left:${x}%; top:${y}%">${card.suitText}</span>
-      `).join('')}
-    </div>
+    <polygon points="${polygonPoints(0)}" fill="#fff9ec" stroke="#45614f" stroke-width="0"/>
+    <polygon points="${polygonPoints(2)}" fill="#fff9ec" stroke="#d9d2c2" stroke-width="1.6"/>
+    <line x1="24" y1="14" x2="76" y2="14" stroke="#cfc7b5" stroke-width="1.6" stroke-linecap="round"/>
+    <line x1="24" y1="126" x2="76" y2="126" stroke="#cfc7b5" stroke-width="1.6" stroke-linecap="round"/>
+    <line x1="14" y1="24" x2="14" y2="116" stroke="#d4cdbc" stroke-width="1.4" stroke-linecap="round"/>
+    <line x1="86" y1="24" x2="86" y2="116" stroke="#d4cdbc" stroke-width="1.4" stroke-linecap="round"/>
+    ${svgText({ x: 26, y: 26, text: card.rankLabel, fill: card.suitFill, size: 12, weight: 800, anchor: 'middle', baseline: 'middle' })}
+    ${svgText({ x: 26, y: 41, text: topIcon, fill: topColor, size: 12, weight: 700, anchor: 'middle', baseline: 'middle', family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 74, y: 114, text: card.rankLabel, fill: card.suitFill, size: 12, weight: 800, anchor: 'middle', baseline: 'middle', rotate: 180 })}
+    ${svgText({ x: 74, y: 99, text: topIcon, fill: topColor, size: 12, weight: 700, anchor: 'middle', baseline: 'middle', rotate: 180, family: 'Georgia, Times New Roman, serif' })}
   `;
 }
 
-function faceMarkup(rawCard) {
-  const card = displayCard(rawCard);
+function pipSvg(card, x, y, size, rotate = 0) {
+  return svgText({
+    x,
+    y,
+    text: card.suitText,
+    fill: card.suitFill,
+    size,
+    weight: 700,
+    rotate,
+    family: 'Georgia, Times New Roman, serif',
+  });
+}
+
+function pipFieldSvg(card) {
+  const rank = card.rank;
+  if (rank === 14) {
+    return pipSvg(card, 50, 70, 28, 0);
+  }
+  if (rank === 17) {
+    return `${pipSvg(card, 50, 40, 18, 0)}${pipSvg(card, 50, 100, 18, 180)}`;
+  }
+  const layout = NUMBER_LAYOUTS[rank] || [[50, 50]];
+  return layout.map(([x, y]) => pipSvg(card, x, y, 16, y > 50 ? 180 : 0)).join('');
+}
+
+function faceFieldSvg(card) {
   const emblem = card.rank === 11 ? '♞' : card.rank === 12 ? '♛' : '♚';
-  const jewel = card.rank === 11
-    ? '<span class="jewel diamond"></span>'
-    : card.rank === 12
-      ? '<span class="jewel orb"></span>'
-      : '<span class="jewel crown"></span>';
+  const jewel = card.rank === 11 ? '◆' : card.rank === 12 ? '●' : '♢';
+  const wingFill = card.suitFill === '#1c1c1c' ? '#d7d0c1' : '#e3d2d2';
   return `
-    <div class="art-frame face-frame ${card.colorClass}">
-      <div class="frame-rule top"></div>
-      <div class="frame-rule bottom"></div>
-      <div class="frame-wing left"></div>
-      <div class="frame-wing right"></div>
-      <div class="frame-suit top">${card.suitText}</div>
-      <div class="frame-emblem">${emblem}</div>
-      <div class="frame-jewel">${jewel}</div>
-      <div class="frame-suit bottom">${card.suitText}</div>
-    </div>
+    <polygon points="28,34 72,34 78,40 78,100 72,106 28,106 22,100 22,40" fill="#fbf4e7" stroke="#d7cebb" stroke-width="1.6"/>
+    <line x1="30" y1="49" x2="70" y2="49" stroke="#d8cdb9" stroke-width="1.6"/>
+    <line x1="30" y1="91" x2="70" y2="91" stroke="#d8cdb9" stroke-width="1.6"/>
+    <polygon points="22,70 30,52 30,88" fill="${wingFill}"/>
+    <polygon points="78,70 70,52 70,88" fill="${wingFill}"/>
+    ${svgText({ x: 50, y: 44, text: card.suitText, fill: card.suitFill, size: 15, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 50, y: 65, text: emblem, fill: '#b88928', size: 22, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 50, y: 86, text: jewel, fill: card.suitFill, size: 16, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 50, y: 98, text: card.suitText, fill: card.suitFill, size: 15, weight: 700, family: 'Georgia, Times New Roman, serif', rotate: 180 })}
   `;
 }
 
-function jokerMarkup(rawCard) {
-  const card = displayCard(rawCard);
+function jokerFieldSvg(card) {
   const small = card.rank === 20;
+  const accent = small ? '#6e59d9' : '#303030';
+  const halo = small ? '#e9e1ff' : '#ece6db';
+  const emblem = small ? '✦' : '✹';
+  const jewel = small ? '◆' : '●';
   return `
-    <div class="art-frame joker-frame ${small ? 'small' : 'big'}">
-      <div class="frame-rule top"></div>
-      <div class="frame-rule bottom"></div>
-      <div class="frame-wing left"></div>
-      <div class="frame-wing right"></div>
-      <div class="frame-word top">JOKER</div>
-      <div class="joker-emblem-wrap">
-        <div class="joker-halo"></div>
-        <div class="joker-emblem">${small ? '✦' : '✹'}</div>
-        <div class="joker-jewel ${small ? 'diamond' : 'orb'}"></div>
-      </div>
-      <div class="frame-word bottom">${small ? 'SMALL' : 'BIG'}</div>
-    </div>
+    <polygon points="28,34 72,34 78,40 78,100 72,106 28,106 22,100 22,40" fill="#fbf4e7" stroke="#d7cebb" stroke-width="1.6"/>
+    <line x1="30" y1="49" x2="70" y2="49" stroke="#d8cdb9" stroke-width="1.6"/>
+    <line x1="30" y1="91" x2="70" y2="91" stroke="#d8cdb9" stroke-width="1.6"/>
+    ${svgText({ x: 50, y: 43, text: 'JOKER', fill: accent, size: 8.7, weight: 800, letterSpacing: '0.9px' })}
+    <circle cx="50" cy="71" r="15" fill="${halo}" stroke="#d7cebb" stroke-width="1.1"/>
+    ${svgText({ x: 50, y: 67, text: emblem, fill: accent, size: 20, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 50, y: 82, text: jewel, fill: accent, size: 12, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 50, y: 97, text: small ? 'SMALL' : 'BIG', fill: accent, size: 8.6, weight: 800, letterSpacing: '0.8px', rotate: 180 })}
   `;
 }
 
-function cardCenterMarkup(rawCard) {
+function frontCardSvg(rawCard) {
   const card = displayCard(rawCard);
-  if (card.rank === 20 || card.rank === 30) return jokerMarkup(card);
-  if ([11, 12, 13].includes(card.rank)) return faceMarkup(card);
-  return pipMarkup(card);
+  let center = '';
+  if (card.rank === 20 || card.rank === 30) center = jokerFieldSvg(card);
+  else if ([11, 12, 13].includes(card.rank)) center = faceFieldSvg(card);
+  else center = pipFieldSvg(card);
+
+  return `
+    <svg class="card-svg" viewBox="0 0 100 140" aria-hidden="true">
+      ${frontBaseSvg(card)}
+      ${center}
+    </svg>
+  `;
 }
 
-function faceDownMarkup() {
+function backCardSvg() {
   return `
-    <div class="card-shadow"></div>
-    <div class="card-back-outer">
-      <div class="card-back-inner">
-        <div class="back-bar left"></div>
-        <div class="back-bar center"></div>
-        <div class="back-bar right"></div>
-        <div class="back-badge top">♠ ♥ ♣ ♦</div>
-        <div class="back-badge bottom">5 · 10 · K</div>
-      </div>
-    </div>
+    <svg class="card-svg" viewBox="0 0 100 140" aria-hidden="true">
+      <polygon points="${polygonPoints(0)}" fill="#21395e" stroke="#9bb8ea" stroke-width="2.2"/>
+      <polygon points="${polygonPoints(6)}" fill="#2c4673" stroke="#7ea1df" stroke-width="1.4"/>
+      <rect x="30" y="26" width="10" height="58" rx="2.5" fill="#55719e" fill-opacity=".35"/>
+      <rect x="45" y="26" width="10" height="58" rx="2.5" fill="#55719e" fill-opacity=".35"/>
+      <rect x="60" y="26" width="10" height="58" rx="2.5" fill="#55719e" fill-opacity=".35"/>
+      ${svgText({ x: 50, y: 33, text: BACK_SUITS.join(' '), fill: '#f5efe1', size: 9.5, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+      ${svgText({ x: 50, y: 100, text: '5 · 10 · K', fill: '#f5efe1', size: 10.6, weight: 700 })}
+      <line x1="30" y1="114" x2="70" y2="114" stroke="#8fb7ff" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
+    </svg>
   `;
 }
 
 function createFaceDownCard() {
   const el = document.createElement('div');
   el.className = 'card-shell back';
-  el.innerHTML = faceDownMarkup();
+  el.innerHTML = `
+    <div class="card-glow"></div>
+    <div class="card-shadow"></div>
+    <div class="card-plate">${backCardSvg()}</div>
+  `;
   return el;
 }
 
@@ -214,27 +264,13 @@ function createCardElement(rawCard, options = {}) {
     selected ? 'selected' : '',
   ].filter(Boolean).join(' ');
 
-  const topIcon = card.suitText || '★';
   wrapper.innerHTML = `
+    <div class="card-glow"></div>
     <div class="card-shadow"></div>
-    <div class="card-outer">
-      <div class="card-inner">
-        <div class="corner top ${card.colorClass}">
-          <div class="rank">${card.rankLabel}</div>
-          <div class="suit">${topIcon}</div>
-        </div>
-        <div class="card-center ${card.colorClass}">${cardCenterMarkup(card)}</div>
-        <div class="corner bottom ${card.colorClass}">
-          <div class="rank">${card.rankLabel}</div>
-          <div class="suit">${topIcon}</div>
-        </div>
-      </div>
-    </div>
+    <div class="card-plate">${frontCardSvg(card)}</div>
   `;
 
-  if (clickable && options.onClick) {
-    wrapper.addEventListener('click', options.onClick);
-  }
+  if (clickable && options.onClick) wrapper.addEventListener('click', options.onClick);
   return wrapper;
 }
 
@@ -348,9 +384,7 @@ function render() {
     els.tableCards.appendChild(typeLabel);
     const row = document.createElement('div');
     row.className = 'card-row table-play-row';
-    for (const card of payload.last_move.cards) {
-      row.appendChild(createCardElement(card));
-    }
+    for (const card of payload.last_move.cards) row.appendChild(createCardElement(card));
     els.tableCards.appendChild(row);
   } else {
     els.tableCards.textContent = 'No active table move';
@@ -406,6 +440,7 @@ async function startNewGame() {
     state.selectedCardKeys = [];
     applyPayload(payload);
     render();
+    scheduleBotTurnIfNeeded();
   } finally {
     state.requestInFlight = false;
     render();
@@ -434,9 +469,7 @@ function scheduleBotTurnIfNeeded() {
   clearBotDelay();
   const payload = state.payload;
   if (!payload || payload.done || !payload.pending_bot_turn) return;
-  state.pendingBotTimeout = setTimeout(() => {
-    runBotTurn();
-  }, BOT_THINK_MS);
+  state.pendingBotTimeout = setTimeout(() => runBotTurn(), BOT_THINK_MS);
 }
 
 async function playAction(actionIndex) {
