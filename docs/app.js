@@ -123,7 +123,7 @@ function ensureIntroOverlay() {
     <div class="intro-modal" role="dialog" aria-modal="true" aria-labelledby="intro-title">
       <div class="intro-topnote">
         <div class="intro-topnote-title">Before you start</div>
-        <div class="intro-topnote-body">The backend may need up to a minute to spin up after inactivity. If the page seems idle on first load, that is usually why.</div>
+        <div class="intro-topnote-body">The backend may need up to a minute to spin up after inactivity. If the page seems idle on first load, that\'s usually why.</div>
       </div>
       <div class="intro-slides">
         <div class="intro-slide-counter"></div>
