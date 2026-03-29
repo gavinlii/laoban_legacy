@@ -1,4 +1,5 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
+const BOT_THINK_MS = 650;
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
@@ -20,7 +21,8 @@ const state = {
   sessionId: null,
   payload: null,
   selectedCardKeys: [],
-  selectedActionIndex: null,
+  pendingBotTimeout: null,
+  requestInFlight: false,
 };
 
 const els = {
@@ -58,16 +60,7 @@ function suitSymbol(suit) {
 }
 
 function suitColor(card) {
-  return card.suit === 'H' || card.suit === 'D' ? 'red' : 'black';
-}
-
-function cardDisplay(card) {
-  return {
-    ...card,
-    rankLabel: card.rank_label || rankText(card.rank),
-    suitText: card.suit_symbol || suitSymbol(card.suit),
-    colorClass: card.color || suitColor(card),
-  };
+  return card.color || ((card.suit === 'H' || card.suit === 'D') ? 'red' : 'black');
 }
 
 function currentScores(payload) {
@@ -79,16 +72,16 @@ function currentScores(payload) {
   };
 }
 
+function actionCardKeys(action) {
+  return (action.cards || []).map((c) => c.key).sort();
+}
+
 function sameKeys(a, b) {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
     if (a[i] !== b[i]) return false;
   }
   return true;
-}
-
-function actionCardKeys(action) {
-  return (action.cards || []).map((c) => c.key).sort();
 }
 
 function selectedAction() {
@@ -106,12 +99,22 @@ function selectedMoveText() {
   return 'Selected cards do not form a legal move.';
 }
 
+function displayCard(rawCard) {
+  return {
+    ...rawCard,
+    rankLabel: rawCard.rank_label || rankText(rawCard.rank),
+    suitText: rawCard.suit_symbol || suitSymbol(rawCard.suit),
+    colorClass: suitColor(rawCard),
+  };
+}
+
 function pipMarkup(card) {
   const count = PIP_COUNTS[card.rank] || 1;
   const layout = PIP_LAYOUTS[count] || PIP_LAYOUTS[1];
   const pip = card.suitText || '•';
+  const sizeClass = count >= 10 ? 'mini' : count >= 8 ? 'tight' : '';
   return `
-    <div class="pip-field ${count >= 8 ? 'tight' : ''}">
+    <div class="pip-field ${sizeClass}">
       ${layout.map(([x, y, angle]) => `
         <span class="pip" style="left:${x}%; top:${y}%; transform: translate(-50%, -50%) rotate(${angle}deg);">${pip}</span>
       `).join('')}
@@ -130,6 +133,8 @@ function faceMarkup(card) {
     <div class="art-frame face-frame ${card.colorClass}">
       <div class="frame-rule top"></div>
       <div class="frame-rule bottom"></div>
+      <div class="frame-wing left"></div>
+      <div class="frame-wing right"></div>
       <div class="frame-suit top">${card.suitText}</div>
       <div class="frame-emblem">${emblem}</div>
       <div class="frame-jewel">${jewel}</div>
@@ -139,20 +144,23 @@ function faceMarkup(card) {
 }
 
 function jokerMarkup(card) {
+  const small = card.rank === 20;
   return `
-    <div class="art-frame joker-frame ${card.rank === 20 ? 'small' : 'big'}">
+    <div class="art-frame joker-frame ${small ? 'small' : 'big'}">
       <div class="frame-rule top"></div>
       <div class="frame-rule bottom"></div>
+      <div class="frame-wing left"></div>
+      <div class="frame-wing right"></div>
       <div class="frame-word top">JOKER</div>
-      <div class="frame-emblem">${card.rank === 20 ? '✦' : '✹'}</div>
-      <div class="frame-jewel ${card.rank === 20 ? 'diamond' : 'orb'}"></div>
-      <div class="frame-word bottom">${card.rank === 20 ? 'SMALL' : 'BIG'}</div>
+      <div class="frame-emblem">${small ? '✦' : '✹'}</div>
+      <div class="frame-jewel ${small ? 'diamond' : 'orb'}"></div>
+      <div class="frame-word bottom">${small ? 'SMALL' : 'BIG'}</div>
     </div>
   `;
 }
 
 function cardCenterMarkup(rawCard) {
-  const card = cardDisplay(rawCard);
+  const card = displayCard(rawCard);
   if (card.rank === 20 || card.rank === 30) return jokerMarkup(card);
   if ([11, 12, 13].includes(card.rank)) return faceMarkup(card);
   return pipMarkup(card);
@@ -178,7 +186,7 @@ function createCardElement(rawCard, options = {}) {
   const clickable = !!options.clickable;
   const playable = !!options.playable;
   const selected = !!options.selected;
-  const card = cardDisplay(rawCard);
+  const card = displayCard(rawCard);
 
   const wrapper = document.createElement('div');
   wrapper.className = [
@@ -195,98 +203,71 @@ function createCardElement(rawCard, options = {}) {
     <div class="card-shadow"></div>
     <div class="card-outer">
       <div class="card-inner">
-        <div class="corner top ${card.suitText ? '' : 'star'}">
+        <div class="corner top ${card.colorClass}">
           <div class="rank">${card.rankLabel}</div>
           <div class="suit">${topIcon}</div>
         </div>
-        <div class="corner bottom ${card.suitText ? '' : 'star'}">
+        <div class="card-center ${card.colorClass}">${cardCenterMarkup(card)}</div>
+        <div class="corner bottom ${card.colorClass}">
           <div class="rank">${card.rankLabel}</div>
           <div class="suit">${topIcon}</div>
         </div>
-        <div class="card-center">${cardCenterMarkup(card)}</div>
       </div>
     </div>
   `;
 
-  if (clickable && typeof options.onClick === 'function') {
+  if (clickable && options.onClick) {
     wrapper.addEventListener('click', options.onClick);
   }
   return wrapper;
 }
 
-function renderMoveBrowser(payload) {
+function clearBotDelay() {
+  if (state.pendingBotTimeout) {
+    clearTimeout(state.pendingBotTimeout);
+    state.pendingBotTimeout = null;
+  }
+}
+
+async function api(path, body, method = 'POST') {
+  const res = await fetch(endpoint(path), {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: method === 'GET' ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Request failed');
+  return data;
+}
+
+function applyPayload(payload) {
+  state.payload = payload;
+  state.sessionId = payload.session_id || payload.game_id || state.sessionId;
+}
+
+function renderMoves(payload) {
   els.moves.innerHTML = '';
   const legalActions = payload.legal_actions || [];
   if (!legalActions.length) {
-    const row = document.createElement('div');
-    row.className = 'move disabled';
-    row.textContent = payload.done ? 'Game over' : 'Waiting for bot...';
-    els.moves.appendChild(row);
+    const move = document.createElement('div');
+    move.className = 'move disabled';
+    move.textContent = payload.done ? 'Game over' : (payload.pending_bot_turn ? 'Bot is thinking…' : 'Waiting for bot…');
+    els.moves.appendChild(move);
     return;
   }
 
-  legalActions.forEach((action) => {
-    const row = document.createElement('div');
-    row.className = [
-      'move',
-      action.is_pass ? 'pass' : '',
-      state.selectedActionIndex === action.index ? 'selected' : '',
-    ].filter(Boolean).join(' ');
-    row.textContent = action.label;
-    row.addEventListener('click', () => {
-      state.selectedActionIndex = action.index;
-      state.selectedCardKeys = (action.cards || []).map((card) => card.key);
+  for (const action of legalActions) {
+    const move = document.createElement('div');
+    move.className = `move${action.is_pass ? ' pass' : ''}`;
+    const actionMatch = selectedAction();
+    if (actionMatch && action.index === actionMatch.index) move.classList.add('selected');
+    move.textContent = action.label;
+    move.addEventListener('click', () => {
+      state.selectedCardKeys = action.is_pass ? [] : action.cards.map((card) => card.key);
       render();
     });
-    row.addEventListener('dblclick', () => playAction(action.index).catch((err) => alert(err.message)));
-    els.moves.appendChild(row);
-  });
-}
-
-function renderCardRow(container, cards, { clickable = false, playable = new Set(), selected = [] } = {}) {
-  container.innerHTML = '';
-  cards.forEach((card) => {
-    const el = createCardElement(card, {
-      clickable,
-      playable: playable.has(card.key),
-      selected: selected.includes(card.key),
-      onClick: () => {
-        if (state.selectedCardKeys.includes(card.key)) {
-          state.selectedCardKeys = state.selectedCardKeys.filter((key) => key !== card.key);
-        } else {
-          state.selectedCardKeys = [...state.selectedCardKeys, card.key];
-        }
-        state.selectedActionIndex = null;
-        render();
-      },
-    });
-    container.appendChild(el);
-  });
-}
-
-function renderOpponentRow(count) {
-  els.opponentHand.innerHTML = '';
-  for (let i = 0; i < count; i += 1) {
-    els.opponentHand.appendChild(createFaceDownCard());
-  }
-}
-
-function renderTable(payload) {
-  els.tableCards.innerHTML = '';
-  const move = payload.last_move;
-  els.tableCards.classList.toggle('empty-state', !(move && !move.is_pass));
-  if (move && !move.is_pass) {
-    const title = document.createElement('div');
-    title.className = 'table-move-type';
-    title.textContent = move.type.toUpperCase();
-    els.tableCards.appendChild(title);
-
-    const row = document.createElement('div');
-    row.className = 'table-card-strip';
-    (move.cards || []).forEach((card) => row.appendChild(createCardElement(card)));
-    els.tableCards.appendChild(row);
-  } else {
-    els.tableCards.textContent = 'No active table move';
+    move.addEventListener('dblclick', () => playAction(action.index));
+    els.moves.appendChild(move);
   }
 }
 
@@ -295,80 +276,151 @@ function render() {
   if (!payload) return;
 
   const scores = currentScores(payload);
-  const playable = new Set(payload.playable_card_keys || []);
-  const humanCards = payload.human_hand || [];
-  const opponentCount = payload.opponent_card_count || 0;
-
-  els.status.textContent = payload.status || `You ${scores.you}   ·   Bot ${scores.bot}   ·   Pot ${scores.pot}`;
-  const turnOwner = payload.turn === 'you' ? 'You' : payload.turn === 'bot' ? 'Bot' : 'Game Over';
-  els.turn.textContent = `Turn: ${turnOwner}   ·   Hand type: ${payload.hand_type || 'open'}`;
-  els.wins.textContent = `Wins - You: ${payload.wins?.you ?? 0}   ·   Bot: ${payload.wins?.bot ?? 0}`;
-  els.deckSize.textContent = `${payload.deck_size ?? 0} card${(payload.deck_size ?? 0) === 1 ? '' : 's'}`;
-  els.opponentStatus.textContent = `Cards in hand: ${opponentCount}`;
+  const playableKeys = new Set(payload.playable_card_keys || []);
+  els.status.textContent = `You ${scores.you} · Bot ${scores.bot} · Pot ${scores.pot}`;
+  const turnLabel = payload.turn === 'you' ? 'You' : payload.turn === 'bot' ? 'Bot' : 'Game Over';
+  els.turn.textContent = `Turn: ${turnLabel} · Hand type: ${payload.hand_type || 'open'}`;
+  els.wins.textContent = `Wins - You: ${payload.wins?.you ?? 0} · Bot: ${payload.wins?.bot ?? 0}`;
+  els.deckSize.textContent = `${payload.deck_size} card${payload.deck_size === 1 ? '' : 's'}`;
+  els.opponentStatus.textContent = `Cards in hand: ${payload.opponent_card_count}`;
   els.lastMove.textContent = `Last move: ${payload.last_move ? payload.last_move.label : 'None'}`;
   els.result.textContent = payload.result || '';
-  els.selection.textContent = selectedMoveText();
+  els.selection.textContent = payload.pending_bot_turn ? 'Bot is thinking…' : selectedMoveText();
   els.log.textContent = (payload.log || []).join('\n');
 
-  renderOpponentRow(opponentCount);
-  renderCardRow(els.humanHand, humanCards, {
-    clickable: payload.turn === 'you' && !payload.done,
-    playable,
-    selected: state.selectedCardKeys,
-  });
-  renderTable(payload);
-  renderMoveBrowser(payload);
+  els.humanHand.innerHTML = '';
+  for (const rawCard of payload.human_hand || []) {
+    const card = displayCard(rawCard);
+    els.humanHand.appendChild(createCardElement(card, {
+      clickable: payload.turn === 'you' && !payload.done && !state.requestInFlight,
+      playable: playableKeys.has(card.key),
+      selected: state.selectedCardKeys.includes(card.key),
+      onClick: () => toggleCard(card.key),
+    }));
+  }
 
-  const canPass = payload.turn === 'you' && (payload.legal_actions || []).some((action) => action.is_pass);
-  const canPlaySelected = payload.turn === 'you' && !!selectedAction();
+  els.opponentHand.innerHTML = '';
+  for (let i = 0; i < (payload.opponent_card_count || 0); i += 1) {
+    els.opponentHand.appendChild(createFaceDownCard());
+  }
+
+  els.tableCards.innerHTML = '';
+  els.tableCards.classList.toggle('empty-state', !(payload.last_move && !payload.last_move.is_pass));
+  if (payload.last_move && !payload.last_move.is_pass) {
+    const typeLabel = document.createElement('div');
+    typeLabel.className = 'table-type';
+    typeLabel.textContent = payload.last_move.type.toUpperCase();
+    els.tableCards.appendChild(typeLabel);
+    const row = document.createElement('div');
+    row.className = 'card-row table-play-row';
+    for (const card of payload.last_move.cards) {
+      row.appendChild(createCardElement(card));
+    }
+    els.tableCards.appendChild(row);
+  } else {
+    els.tableCards.textContent = 'No active table move';
+  }
+
+  renderMoves(payload);
+
+  const canAct = payload.turn === 'you' && !payload.done && !state.requestInFlight;
+  const canPass = canAct && (payload.legal_actions || []).some((action) => action.is_pass);
+  const canPlay = canAct && !!selectedAction();
+  els.playBtn.disabled = !canPlay;
   els.passBtn.disabled = !canPass;
-  els.playBtn.disabled = !canPlaySelected;
-  els.clearBtn.disabled = state.selectedCardKeys.length === 0;
+  els.clearBtn.disabled = state.selectedCardKeys.length === 0 || state.requestInFlight;
+  els.newGameBtn.disabled = state.requestInFlight;
+  els.startingPlayer.disabled = state.requestInFlight;
 }
 
-async function api(path, body, method = 'POST') {
-  const response = await fetch(endpoint(path), {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: method === 'GET' ? undefined : JSON.stringify(body),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.detail || 'Request failed');
-  return data;
+function toggleCard(key) {
+  const payload = state.payload;
+  if (!payload || payload.turn !== 'you' || payload.done || state.requestInFlight) return;
+  if (state.selectedCardKeys.includes(key)) {
+    state.selectedCardKeys = state.selectedCardKeys.filter((k) => k !== key);
+  } else {
+    state.selectedCardKeys = [...state.selectedCardKeys, key];
+  }
+  render();
 }
 
 async function loadHealth() {
-  const response = await fetch(endpoint('/health'));
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.detail || 'Health check failed');
-  els.meta.textContent = `Connected to ${API_BASE || 'same-origin API'}  |  encoder: ${data.encoder}  |  dims: ${data.state_dim}/${data.action_dim}  |  checkpoint: ${data.checkpoint}`;
+  try {
+    const res = await fetch(endpoint('/health'));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Health check failed');
+    els.meta.textContent = `Connected to ${API_BASE || 'same-origin API'} | encoder: ${data.encoder} | dims: ${data.state_dim}/${data.action_dim} | checkpoint: ${data.checkpoint}`;
+  } catch (err) {
+    els.meta.innerHTML = `<span class="error">Backend connection failed.</span> Check <code>config.js</code>.`;
+    throw err;
+  }
 }
 
 async function startNewGame() {
-  const payload = await api('/api/new-game', { bot_first: els.startingPlayer.value === 'bot' });
-  state.sessionId = payload.session_id || payload.game_id;
-  state.payload = payload;
-  state.selectedCardKeys = [];
-  state.selectedActionIndex = null;
+  clearBotDelay();
+  state.requestInFlight = true;
   render();
+  try {
+    const botFirst = els.startingPlayer.value === 'bot';
+    const payload = state.sessionId
+      ? await api('/api/reset', { session_id: state.sessionId, bot_first: botFirst })
+      : await api('/api/new-game', { bot_first: botFirst });
+    state.selectedCardKeys = [];
+    applyPayload(payload);
+    render();
+  } finally {
+    state.requestInFlight = false;
+    render();
+  }
+}
+
+async function runBotTurn() {
+  if (!state.sessionId) return;
+  state.requestInFlight = true;
+  render();
+  try {
+    const payload = await api('/api/bot-turn', { session_id: state.sessionId });
+    applyPayload(payload);
+    render();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    state.requestInFlight = false;
+    state.pendingBotTimeout = null;
+    render();
+  }
+}
+
+function scheduleBotTurnIfNeeded() {
+  clearBotDelay();
+  const payload = state.payload;
+  if (!payload || payload.done || !payload.pending_bot_turn) return;
+  state.pendingBotTimeout = setTimeout(() => {
+    runBotTurn();
+  }, BOT_THINK_MS);
 }
 
 async function playAction(actionIndex) {
-  if (!state.sessionId) return;
-  const payload = await api('/api/action', { session_id: state.sessionId, action_index: actionIndex });
-  state.payload = payload;
-  state.selectedCardKeys = [];
-  state.selectedActionIndex = null;
+  if (!state.sessionId || state.requestInFlight) return;
+  clearBotDelay();
+  state.requestInFlight = true;
   render();
+  try {
+    const payload = await api('/api/action', { session_id: state.sessionId, action_index: actionIndex });
+    state.selectedCardKeys = [];
+    applyPayload(payload);
+    render();
+    scheduleBotTurnIfNeeded();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    state.requestInFlight = false;
+    render();
+  }
 }
 
-els.newGameBtn.addEventListener('click', () => {
-  startNewGame().catch((err) => alert(err.message));
-});
-
-els.startingPlayer.addEventListener('change', () => {
-  startNewGame().catch((err) => alert(err.message));
-});
+els.newGameBtn.addEventListener('click', () => startNewGame().catch((err) => alert(err.message)));
+els.startingPlayer.addEventListener('change', () => startNewGame().catch((err) => alert(err.message)));
 
 els.playBtn.addEventListener('click', () => {
   const action = selectedAction();
@@ -376,7 +428,7 @@ els.playBtn.addEventListener('click', () => {
     alert('Pick cards that exactly match one of the legal moves.');
     return;
   }
-  playAction(action.index).catch((err) => alert(err.message));
+  playAction(action.index);
 });
 
 els.passBtn.addEventListener('click', () => {
@@ -385,12 +437,11 @@ els.passBtn.addEventListener('click', () => {
     alert('Pass is not legal right now.');
     return;
   }
-  playAction(passAction.index).catch((err) => alert(err.message));
+  playAction(passAction.index);
 });
 
 els.clearBtn.addEventListener('click', () => {
   state.selectedCardKeys = [];
-  state.selectedActionIndex = null;
   render();
 });
 
@@ -398,7 +449,7 @@ els.clearBtn.addEventListener('click', () => {
   try {
     await loadHealth();
     await startNewGame();
-  } catch (err) {
-    els.meta.innerHTML = `<span class="error">Backend connection failed.</span> ${err.message}`;
+  } catch (_) {
+    // health text already updated
   }
 })();

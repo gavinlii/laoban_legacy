@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -53,6 +52,7 @@ class WebMatchController:
     bot_first: bool = False
     seed: Optional[int] = None
     bot: BotPlayer = field(init=False)
+    session_id: str = field(init=False, default_factory=lambda: uuid.uuid4().hex)
     human_seat: int = field(init=False, default=0)
     bot_seat: int = field(init=False, default=1)
     env: Optional[GameEnv] = field(init=False, default=None)
@@ -62,16 +62,15 @@ class WebMatchController:
     human_wins: int = field(init=False, default=0)
     bot_wins: int = field(init=False, default=0)
     last_result_counted: bool = field(init=False, default=False)
-    game_id: str = field(init=False, default_factory=lambda: uuid.uuid4().hex)
 
     def __post_init__(self):
         self.bot = BotPlayer(self.policy)
-        self.reset(initial=True)
+        self.reset(initial=True, autoplay_bot=False)
 
     def _seat_name(self, seat: int) -> str:
         return "you" if seat == self.human_seat else "bot"
 
-    def reset(self, initial: bool = False):
+    def reset(self, initial: bool = False, autoplay_bot: bool = True):
         self.env = GameEnv([RandomPlayer(), RandomPlayer()], seed=self.seed, verbose=False)
         starter_seat = self.env.current_player
         if self.bot_first:
@@ -84,8 +83,7 @@ class WebMatchController:
         self.last_move = None
         self.log = ["Begin", "Bot starts" if self.bot_first else "You start"]
         self.last_result_counted = False
-        self.game_id = uuid.uuid4().hex
-        if not initial:
+        if autoplay_bot and not initial:
             self.autoplay_until_human()
 
     def current_infoset(self, concrete_for_human: bool = False):
@@ -221,6 +219,9 @@ class WebMatchController:
         if action_index < 0 or action_index >= len(legal):
             raise IndexError("Action index out of range.")
         self.apply_action(legal[action_index])
+        self._count_finished_game_if_needed()
+
+    def bot_play_if_needed(self):
         self.autoplay_until_human()
 
     def _serialize_card(self, card: Card) -> Dict[str, object]:
@@ -230,6 +231,8 @@ class WebMatchController:
             "label": card_label(card),
             "key": f"{card.rank}:{card.suit or ''}",
             "color": "red" if card.suit in {"H", "D"} else "black",
+            "rank_label": rank_text(card.rank),
+            "suit_symbol": suit_symbol(card.suit),
         }
 
     def _serialize_action(self, action, idx: int) -> Dict[str, object]:
@@ -272,7 +275,8 @@ class WebMatchController:
         playable_keys = sorted({card["key"] for action in serialized_legal if not action["is_pass"] for card in action["cards"]})
 
         return {
-            "game_id": self.game_id,
+            "session_id": self.session_id,
+            "game_id": self.session_id,
             "bot_first": self.bot_first,
             "status": f"You {env.points[self.human_seat]} · Bot {env.points[self.bot_seat]} · Pot {env.current_pot}",
             "scores": {
@@ -285,6 +289,7 @@ class WebMatchController:
                 "bot": self.bot_wins,
             },
             "turn": "you" if self.is_human_turn() else "bot" if self.is_bot_turn() else "game_over",
+            "pending_bot_turn": self.is_bot_turn() and not env.done,
             "hand_type": self.hand_type or "open",
             "deck_size": env.deck.size(),
             "opponent_card_count": len(env.hands[self.bot_seat]),
@@ -314,7 +319,7 @@ class SessionStore:
     def create(self, bot_first: bool = False, seed: Optional[int] = None) -> WebMatchController:
         controller = WebMatchController(policy=self.policy, bot_first=bot_first, seed=seed)
         controller.autoplay_until_human()
-        self.sessions[controller.game_id] = controller
+        self.sessions[controller.session_id] = controller
         return controller
 
     def get(self, session_id: str) -> WebMatchController:

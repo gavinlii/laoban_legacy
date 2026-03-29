@@ -17,7 +17,7 @@ CHECKPOINT_PATH = os.getenv("CHECKPOINT_PATH", str(BASE_DIR / "policy_main.pt"))
 policy = load_policy(CHECKPOINT_PATH)
 sessions = SessionStore(policy)
 
-app = FastAPI(title="laoban.cards API", version="0.1.0")
+app = FastAPI(title="laoban.cards API", version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,6 +35,10 @@ class NewGameRequest(BaseModel):
 class ActionRequest(BaseModel):
     session_id: str
     action_index: int
+
+
+class SessionRequest(BaseModel):
+    session_id: str
 
 
 class ResetRequest(BaseModel):
@@ -85,6 +89,17 @@ def action(req: ActionRequest):
     return controller.state_payload()
 
 
+@app.post("/api/bot-turn")
+def bot_turn(req: SessionRequest):
+    try:
+        controller = sessions.get(req.session_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session not found.")
+
+    controller.bot_play_if_needed()
+    return controller.state_payload()
+
+
 @app.post("/api/reset")
 def reset(req: ResetRequest):
     try:
@@ -96,7 +111,7 @@ def reset(req: ResetRequest):
         controller.bot_first = req.bot_first
     if req.seed is not None:
         controller.seed = req.seed
-    controller.reset(initial=False)
+    controller.reset(initial=False, autoplay_bot=True)
     return controller.state_payload()
 
 
