@@ -835,20 +835,19 @@ select,
     background: var(--paper);
   }
 
+  .card-body,
+  .card-shadow {
+    transition: none;
+  }
+
   .card-shell.clickable:hover .card-body,
-  .card-shell.clickable.selected:hover .card-body {
+  .card-shell.clickable.selected:hover .card-body,
+  .card-shell.selected .card-body {
     transform: translateY(0);
   }
 
-  .card-shell.selected .card-body {
-    transform: translateY(-6px);
-  }
-
-  .card-shell.clickable:hover .card-shadow {
-    transform: translateX(4px);
-  }
-
+  .card-shell.clickable:hover .card-shadow,
   .card-shell.selected .card-shadow {
-    transform: translateX(4px) translateY(-2px);
+    transform: translateX(4px);
   }
 }
