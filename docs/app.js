@@ -1,5 +1,6 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
 const BOT_THINK_MS = 440;
+const COFFEE_URL = window.LAOBAN_COFFEE_URL || 'https://buymeacoffee.com/';
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
@@ -110,6 +111,24 @@ function setWaitingForBackend(isWaiting) {
     els.selection.textContent = '';
     els.selection.classList.remove('waiting-backend');
   }
+}
+
+
+function ensureCoffeeButton() {
+  const topControls = document.querySelector('.top-controls');
+  if (!topControls || document.getElementById('coffee-btn')) return;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'coffee-btn';
+  button.className = 'coffee-btn';
+  button.setAttribute('aria-label', 'Buy me a coffee');
+  button.innerHTML = '<span class="coffee-btn-icon" aria-hidden="true">☕</span><span>Buy me a coffee</span>';
+  button.addEventListener('click', () => {
+    window.open(COFFEE_URL, '_blank', 'noopener,noreferrer');
+  });
+
+  topControls.appendChild(button);
 }
 
 function ensureIntroOverlay() {
@@ -669,6 +688,7 @@ els.clearBtn.addEventListener('click', () => {
   renderStaticDrawPile();
   setWaitingForBackend(true);
   ensureIntroOverlay();
+  ensureCoffeeButton();
 })();
 
 (async function init() {

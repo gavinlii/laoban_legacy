@@ -75,6 +75,21 @@ body {
   font-size: 12px;
 }
 
+
+.coffee-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.coffee-btn-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+
 select, button {
   font: inherit;
   border: 0;
@@ -114,7 +129,7 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
 
 .meta, .panel {
   border: 2px solid var(--accent-dark);
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .meta {
@@ -247,7 +262,7 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
   text-align: center;
   padding: 7px 14px;
   border: 2px solid var(--accent-dark);
-  border-radius: 12px;
+  border-radius: 9px;
   background: rgba(21, 53, 40, .42);
   font-weight: 800;
 }
@@ -498,7 +513,7 @@ code { font-family: var(--mono); }
   overflow: auto;
   background: rgba(16, 41, 31, .97);
   border: 2px solid var(--accent-dark);
-  border-radius: 22px;
+  border-radius: 14px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, .42);
   padding: 22px 24px 18px;
   transform: translateY(0) scale(1);
@@ -511,7 +526,7 @@ code { font-family: var(--mono); }
   margin-bottom: 16px;
   padding: 14px 16px;
   border: 1px solid rgba(244, 199, 91, .35);
-  border-radius: 16px;
+  border-radius: 11px;
   background: rgba(244, 199, 91, .08);
 }
 
