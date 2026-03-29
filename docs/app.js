@@ -1,19 +1,19 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
-const BOT_THINK_MS = 120;
+const BOT_THINK_MS = 90;
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
 const SUIT_COLORS = {H: '#c74343', D: '#c74343', C: '#1c1c1c', S: '#1c1c1c'};
 const BACK_SUITS = ['♠', '♥', '♣', '♦'];
 const NUMBER_LAYOUTS = {
-  3: [[50, 28], [50, 50], [50, 72]],
-  4: [[34, 31], [66, 31], [34, 69], [66, 69]],
-  5: [[34, 31], [66, 31], [50, 50], [34, 69], [66, 69]],
-  6: [[34, 26], [66, 26], [34, 50], [66, 50], [34, 74], [66, 74]],
-  7: [[34, 24], [66, 24], [50, 38], [34, 50], [66, 50], [34, 76], [66, 76]],
-  8: [[34, 22], [66, 22], [34, 40], [66, 40], [34, 60], [66, 60], [34, 78], [66, 78]],
-  9: [[34, 22], [66, 22], [34, 38], [66, 38], [50, 50], [34, 62], [66, 62], [34, 78], [66, 78]],
-  10: [[34, 20], [66, 20], [34, 34], [66, 34], [34, 48], [66, 48], [34, 62], [66, 62], [34, 76], [66, 76]],
+  3: [[50, 33], [50, 55], [50, 77]],
+  4: [[39, 34], [61, 34], [39, 68], [61, 68]],
+  5: [[39, 34], [61, 34], [50, 55], [39, 68], [61, 68]],
+  6: [[39, 30], [61, 30], [39, 54], [61, 54], [39, 78], [61, 78]],
+  7: [[39, 29], [61, 29], [50, 44], [39, 54], [61, 54], [39, 79], [61, 79]],
+  8: [[39, 27], [61, 27], [39, 43], [61, 43], [39, 62], [61, 62], [39, 78], [61, 78]],
+  9: [[39, 26], [61, 26], [39, 41], [61, 41], [50, 55], [39, 65], [61, 65], [39, 80], [61, 80]],
+  10: [[39, 25], [61, 25], [39, 39], [61, 39], [39, 54], [61, 54], [39, 68], [61, 68], [39, 82], [61, 82]],
 };
 
 const state = {
@@ -157,19 +157,20 @@ function pipSvg(card, x, y, size, rotate = 0) {
     weight: 700,
     rotate,
     family: 'Georgia, Times New Roman, serif',
+    baseline: 'middle',
   });
 }
 
 function pipFieldSvg(card) {
   const rank = card.rank;
   if (rank === 14) {
-    return pipSvg(card, 50, 70, 28, 0);
+    return pipSvg(card, 50, 74, 26, 0);
   }
   if (rank === 17) {
-    return `${pipSvg(card, 50, 40, 18, 0)}${pipSvg(card, 50, 100, 18, 180)}`;
+    return `${pipSvg(card, 50, 42, 16, 0)}${pipSvg(card, 50, 102, 16, 180)}`;
   }
-  const layout = NUMBER_LAYOUTS[rank] || [[50, 50]];
-  return layout.map(([x, y]) => pipSvg(card, x, y, 16, y > 50 ? 180 : 0)).join('');
+  const layout = NUMBER_LAYOUTS[rank] || [[50, 55]];
+  return layout.map(([x, y]) => pipSvg(card, x, y, 15, y > 55 ? 180 : 0)).join('');
 }
 
 function faceFieldSvg(card) {
@@ -225,14 +226,14 @@ function frontCardSvg(rawCard) {
 function backCardSvg() {
   return `
     <svg class="card-svg" viewBox="0 0 100 140" aria-hidden="true">
-      <polygon points="${polygonPoints(0)}" fill="#21395e" stroke="#9bb8ea" stroke-width="2.2"/>
-      <polygon points="${polygonPoints(6)}" fill="#2c4673" stroke="#7ea1df" stroke-width="1.4"/>
-      <rect x="30" y="26" width="10" height="58" rx="2.5" fill="#55719e" fill-opacity=".35"/>
-      <rect x="45" y="26" width="10" height="58" rx="2.5" fill="#55719e" fill-opacity=".35"/>
-      <rect x="60" y="26" width="10" height="58" rx="2.5" fill="#55719e" fill-opacity=".35"/>
-      ${svgText({ x: 50, y: 33, text: BACK_SUITS.join(' '), fill: '#f5efe1', size: 9.5, weight: 700, family: 'Georgia, Times New Roman, serif' })}
-      ${svgText({ x: 50, y: 100, text: '5 · 10 · K', fill: '#f5efe1', size: 10.6, weight: 700 })}
-      <line x1="30" y1="114" x2="70" y2="114" stroke="#8fb7ff" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
+      <polygon points="${polygonPoints(0)}" fill="#21395e" stroke="#9bb8ea" stroke-width="2.4" stroke-linejoin="round"/>
+      <polygon points="${polygonPoints(4)}" fill="#2c4673" stroke="#8fb7ff" stroke-width="1.6" stroke-linejoin="round"/>
+      <rect x="29" y="28" width="9" height="58" rx="2.5" fill="#6f8fc2" fill-opacity=".28"/>
+      <rect x="45.5" y="28" width="9" height="58" rx="2.5" fill="#6f8fc2" fill-opacity=".28"/>
+      <rect x="62" y="28" width="9" height="58" rx="2.5" fill="#6f8fc2" fill-opacity=".28"/>
+      ${svgText({ x: 50, y: 35, text: BACK_SUITS.join(' '), fill: '#f5efe1', size: 11.8, weight: 700, family: 'Georgia, Times New Roman, serif', letterSpacing: '0.3px' })}
+      ${svgText({ x: 50, y: 100, text: '5 · 10 · K', fill: '#f5efe1', size: 10.8, weight: 700 })}
+      <line x1="30" y1="114" x2="70" y2="114" stroke="#8fb7ff" stroke-width="1.7" stroke-linecap="round" opacity=".9"/>
     </svg>
   `;
 }
@@ -241,9 +242,11 @@ function createFaceDownCard() {
   const el = document.createElement('div');
   el.className = 'card-shell back';
   el.innerHTML = `
-    <div class="card-glow"></div>
     <div class="card-shadow"></div>
-    <div class="card-plate">${backCardSvg()}</div>
+    <div class="card-body">
+      <div class="card-glow"></div>
+      <div class="card-plate">${backCardSvg()}</div>
+    </div>
   `;
   return el;
 }
@@ -265,9 +268,11 @@ function createCardElement(rawCard, options = {}) {
   ].filter(Boolean).join(' ');
 
   wrapper.innerHTML = `
-    <div class="card-glow"></div>
     <div class="card-shadow"></div>
-    <div class="card-plate">${frontCardSvg(card)}</div>
+    <div class="card-body">
+      <div class="card-glow"></div>
+      <div class="card-plate">${frontCardSvg(card)}</div>
+    </div>
   `;
 
   if (clickable && options.onClick) wrapper.addEventListener('click', options.onClick);
@@ -313,7 +318,7 @@ function renderMoves(payload) {
   if (!legalActions.length) {
     const move = document.createElement('div');
     move.className = 'move disabled';
-    move.textContent = payload.done ? 'Game over' : (payload.pending_bot_turn ? 'Bot is thinking…' : 'Waiting for bot…');
+    move.textContent = payload.done ? 'Game over' : 'Waiting for bot…';
     els.moves.appendChild(move);
     return;
   }
@@ -355,7 +360,7 @@ function render() {
   els.opponentStatus.textContent = `Cards in hand: ${payload.opponent_card_count}`;
   els.lastMove.textContent = `Last move: ${payload.last_move ? payload.last_move.label : 'None'}`;
   els.result.textContent = payload.result || '';
-  els.selection.textContent = payload.pending_bot_turn ? 'Bot is thinking…' : selectedMoveText();
+  els.selection.textContent = selectedMoveText();
   els.log.textContent = (payload.log || []).join('\n');
 
   els.humanHand.innerHTML = '';

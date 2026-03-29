@@ -13,8 +13,8 @@
   --shadow: rgba(0, 0, 0, .78);
   --mono: Menlo, Monaco, Consolas, monospace;
   --ui: 'Trebuchet MS', 'Segoe UI', sans-serif;
-  --card-w: 88px;
-  --card-h: 123px;
+  --card-w: 90px;
+  --card-h: 126px;
   --lift-top: 12px;
   --lift-bottom: 8px;
   --card-shell-h: calc(var(--card-h) + var(--lift-top) + var(--lift-bottom));
@@ -330,6 +330,7 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
 .selection {
   min-height: 20px;
   text-align: center;
+  margin-top: 4px;
 }
 
 .human-area {
@@ -394,8 +395,21 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
   user-select: none;
 }
 
+.card-body,
+.card-shadow {
+  position: absolute;
+  left: 0;
+  width: var(--card-w);
+  height: var(--card-h);
+}
+
+.card-body {
+  top: var(--lift-top);
+  transform: translateY(0);
+  transition: transform .14s ease, filter .14s ease;
+}
+
 .card-glow,
-.card-shadow,
 .card-plate {
   position: absolute;
   left: 0;
@@ -405,8 +419,7 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
 }
 
 .card-glow {
-  top: var(--lift-top);
-  border-radius: 12px;
+  border-radius: 13px;
   opacity: 0;
   transition: opacity .14s ease, box-shadow .14s ease;
 }
@@ -419,11 +432,6 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
   filter: saturate(.7);
 }
 
-.card-plate {
-  top: var(--lift-top);
-  transform: translateY(0);
-  transition: transform .14s ease, filter .14s ease;
-}
 
 .card-svg {
   display: block;
@@ -442,9 +450,9 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
   box-shadow: 0 0 0 4px var(--selected-border), 0 0 15px rgba(255, 215, 110, .18);
 }
 
-.card-shell.clickable:hover .card-plate { transform: translateY(-7px); }
-.card-shell.selected .card-plate { transform: translateY(-6px); }
-.card-shell.clickable.selected:hover .card-plate { transform: translateY(-8px); }
+.card-shell.clickable:hover .card-body { transform: translateY(-7px); }
+.card-shell.selected .card-body { transform: translateY(-6px); }
+.card-shell.clickable.selected:hover .card-body { transform: translateY(-8px); }
 
 .card-shell.clickable:hover .card-shadow { transform: translateX(4px) translateY(-2px); }
 .card-shell.selected .card-shadow { transform: translateX(4px) translateY(-2px); }
