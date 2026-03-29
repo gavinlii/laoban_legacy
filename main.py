@@ -6,8 +6,6 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from policy_loader import load_policy
@@ -19,7 +17,7 @@ CHECKPOINT_PATH = os.getenv("CHECKPOINT_PATH", str(BASE_DIR / "policy_main.pt"))
 policy = load_policy(CHECKPOINT_PATH)
 sessions = SessionStore(policy)
 
-app = FastAPI(title="laoban.cards", version="0.1.0")
+app = FastAPI(title="laoban.cards API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +25,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 
 class NewGameRequest(BaseModel):
@@ -48,7 +45,11 @@ class ResetRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return FileResponse(str(BASE_DIR / "static" / "index.html"))
+    return {
+        "ok": True,
+        "message": "laoban.cards backend is running",
+        "health_endpoint": "/health",
+    }
 
 
 @app.get("/health")
