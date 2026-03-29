@@ -6,14 +6,14 @@ const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
 const SUIT_COLORS = {H: '#c74343', D: '#c74343', C: '#1c1c1c', S: '#1c1c1c'};
 const BACK_SUITS = ['♠', '♥', '♣', '♦'];
 const NUMBER_LAYOUTS = {
-  3: [[50, 33], [50, 55], [50, 77]],
-  4: [[39, 34], [61, 34], [39, 68], [61, 68]],
-  5: [[39, 34], [61, 34], [50, 55], [39, 68], [61, 68]],
-  6: [[39, 30], [61, 30], [39, 54], [61, 54], [39, 78], [61, 78]],
-  7: [[39, 29], [61, 29], [50, 44], [39, 54], [61, 54], [39, 79], [61, 79]],
-  8: [[39, 27], [61, 27], [39, 43], [61, 43], [39, 62], [61, 62], [39, 78], [61, 78]],
-  9: [[39, 26], [61, 26], [39, 41], [61, 41], [50, 55], [39, 65], [61, 65], [39, 80], [61, 80]],
-  10: [[39, 25], [61, 25], [39, 39], [61, 39], [39, 54], [61, 54], [39, 68], [61, 68], [39, 82], [61, 82]],
+  3: [[50, 38], [50, 60], [50, 82]],
+  4: [[39, 39], [61, 39], [39, 73], [61, 73]],
+  5: [[39, 39], [61, 39], [50, 60], [39, 73], [61, 73]],
+  6: [[39, 35], [61, 35], [39, 59], [61, 59], [39, 83], [61, 83]],
+  7: [[39, 34], [61, 34], [50, 49], [39, 59], [61, 59], [39, 84], [61, 84]],
+  8: [[39, 32], [61, 32], [39, 48], [61, 48], [39, 67], [61, 67], [39, 83], [61, 83]],
+  9: [[39, 31], [61, 31], [39, 46], [61, 46], [50, 60], [39, 70], [61, 70], [39, 85], [61, 85]],
+  10: [[39, 30], [61, 30], [39, 44], [61, 44], [39, 59], [61, 59], [39, 73], [61, 73], [39, 87], [61, 87]],
 };
 
 const state = {
@@ -164,10 +164,10 @@ function pipSvg(card, x, y, size, rotate = 0) {
 function pipFieldSvg(card) {
   const rank = card.rank;
   if (rank === 14) {
-    return pipSvg(card, 50, 74, 26, 0);
+    return pipSvg(card, 50, 78, 26, 0);
   }
   if (rank === 17) {
-    return `${pipSvg(card, 50, 42, 16, 0)}${pipSvg(card, 50, 102, 16, 180)}`;
+    return `${pipSvg(card, 50, 46, 16, 0)}${pipSvg(card, 50, 106, 16, 180)}`;
   }
   const layout = NUMBER_LAYOUTS[rank] || [[50, 55]];
   return layout.map(([x, y]) => pipSvg(card, x, y, 15, y > 55 ? 180 : 0)).join('');
@@ -231,7 +231,7 @@ function backCardSvg() {
       <rect x="29" y="28" width="9" height="58" rx="2.5" fill="#6f8fc2" fill-opacity=".28"/>
       <rect x="45.5" y="28" width="9" height="58" rx="2.5" fill="#6f8fc2" fill-opacity=".28"/>
       <rect x="62" y="28" width="9" height="58" rx="2.5" fill="#6f8fc2" fill-opacity=".28"/>
-      ${svgText({ x: 50, y: 35, text: BACK_SUITS.join(' '), fill: '#f5efe1', size: 11.8, weight: 700, family: 'Georgia, Times New Roman, serif', letterSpacing: '0.3px' })}
+      ${svgText({ x: 50, y: 47, text: BACK_SUITS.join(' '), fill: '#f5efe1', size: 15.6, weight: 700, family: 'Georgia, Times New Roman, serif', letterSpacing: '0.3px' })}
       ${svgText({ x: 50, y: 100, text: '5 · 10 · K', fill: '#f5efe1', size: 10.8, weight: 700 })}
       <line x1="30" y1="114" x2="70" y2="114" stroke="#8fb7ff" stroke-width="1.7" stroke-linecap="round" opacity=".9"/>
     </svg>
@@ -318,7 +318,7 @@ function renderMoves(payload) {
   if (!legalActions.length) {
     const move = document.createElement('div');
     move.className = 'move disabled';
-    move.textContent = payload.done ? 'Game over' : 'Waiting for bot…';
+    move.textContent = payload.done ? 'Game over' : (payload.pending_bot_turn ? 'Bot is thinking…' : 'Waiting for bot…');
     els.moves.appendChild(move);
     return;
   }
@@ -360,7 +360,7 @@ function render() {
   els.opponentStatus.textContent = `Cards in hand: ${payload.opponent_card_count}`;
   els.lastMove.textContent = `Last move: ${payload.last_move ? payload.last_move.label : 'None'}`;
   els.result.textContent = payload.result || '';
-  els.selection.textContent = selectedMoveText();
+  els.selection.textContent = payload.pending_bot_turn ? 'Bot is thinking…' : selectedMoveText();
   els.log.textContent = (payload.log || []).join('\n');
 
   els.humanHand.innerHTML = '';
