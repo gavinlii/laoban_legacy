@@ -3,4 +3,5 @@ uvicorn[standard]
 python-multipart
 jinja2
 numpy
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
