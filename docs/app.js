@@ -1,6 +1,6 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
 const BOT_THINK_MS = 440;
-const COFFEE_URL = window.LAOBAN_COFFEE_URL || 'https://buymeacoffee.com/laoban';
+const COFFEE_URL = window.LAOBAN_COFFEE_URL || 'https://buymeacoffee.com/';
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
@@ -34,7 +34,7 @@ const RULE_SLIDES = [
     title: 'How a hand works',
     body: [
       'Players contest one hand at a time. Once a player plays their first card(s), all replies in the hand must be the same type and stronger - unless you use a bomb. A single 9 beats a single 7; a single J can\'t beat a pair of 8s. 3s are lowest, Kings, Aces, 2s, and Jokers are highest.',
-      'A single PASS ends the hand immediately. You can pass at anytime except when you start a hand. The last player who successfully played wins the pot and leads the next hand.',
+      'In this implementation, a single PASS ends the hand immediately. You can pass at anytime except when you start a hand. The last player who successfully played wins the pot and leads the next hand.',
     ],
   },
   {
@@ -69,6 +69,19 @@ const RULE_SLIDES = [
 ];
 
 
+const POINT_CARD_VALUES = {5: 5, 10: 10, 13: 10};
+const POINT_CARD_SIDE_KEYS = {
+  you: ['you', 'human', 'self', 'player0', 'p0'],
+  bot: ['bot', 'opponent', 'opp', 'player1', 'p1'],
+};
+
+function createEmptyPointCardState() {
+  return {
+    currentPotCards: [],
+    wonCards: { you: [], bot: [] },
+  };
+}
+
 const state = {
   sessionId: null,
   payload: null,
@@ -76,6 +89,7 @@ const state = {
   pendingBotTimeout: null,
   requestInFlight: false,
   introSlideIndex: 0,
+  pointCards: createEmptyPointCardState(),
 };
 
 const els = {
@@ -99,6 +113,8 @@ const els = {
   newGameBtn: document.getElementById('new-game-btn'),
   startingPlayer: document.getElementById('starting-player'),
   deckCards: document.querySelector('.deck-cards'),
+  opponentArea: document.querySelector('.opponent-area'),
+  humanArea: document.querySelector('.human-area'),
 };
 
 
@@ -114,6 +130,206 @@ function setWaitingForBackend(isWaiting) {
 }
 
 
+function cloneCard(rawCard) {
+  if (!rawCard) return null;
+  return {
+    key: rawCard.key || `${rawCard.rank || ''}${rawCard.suit || ''}-${Math.random().toString(36).slice(2, 9)}`,
+    rank: rawCard.rank,
+    suit: rawCard.suit,
+    rank_label: rawCard.rank_label,
+    suit_symbol: rawCard.suit_symbol,
+    color: rawCard.color,
+  };
+}
+
+function isPointCard(rawCard) {
+  return !!POINT_CARD_VALUES[rawCard?.rank];
+}
+
+function pointValue(rawCard) {
+  return POINT_CARD_VALUES[rawCard?.rank] || 0;
+}
+
+function pointCardsFromList(cards) {
+  return (cards || []).filter(isPointCard).map(cloneCard).filter(Boolean);
+}
+
+function pointCardsTotal(cards) {
+  return (cards || []).reduce((sum, card) => sum + pointValue(card), 0);
+}
+
+function cardFingerprint(rawCard) {
+  if (!rawCard) return '';
+  return rawCard.key || `${rawCard.rank || ''}${rawCard.suit || ''}`;
+}
+
+function moveFingerprint(move) {
+  if (!move) return '';
+  if (move.is_pass) return `pass|${move.label || ''}`;
+  return `${move.type || ''}|${(move.cards || []).map(cardFingerprint).join(',')}`;
+}
+
+function extractSideCardList(bucket, side) {
+  if (!bucket || typeof bucket !== 'object') return null;
+  for (const key of POINT_CARD_SIDE_KEYS[side]) {
+    if (Array.isArray(bucket[key])) return bucket[key].map(cloneCard).filter(Boolean);
+  }
+  return null;
+}
+
+function explicitWonPointCards(payload) {
+  const buckets = [
+    payload?.captured_point_cards,
+    payload?.capturedPointCards,
+    payload?.won_point_cards,
+    payload?.wonPointCards,
+    payload?.point_cards_won,
+    payload?.pointCardsWon,
+    payload?.point_card_stacks,
+    payload?.pointCardStacks,
+    payload?.scored_point_cards,
+    payload?.scoredPointCards,
+  ].filter(Boolean);
+
+  for (const bucket of buckets) {
+    const you = extractSideCardList(bucket, 'you');
+    const bot = extractSideCardList(bucket, 'bot');
+    if (you || bot) {
+      return {
+        you: you || [],
+        bot: bot || [],
+      };
+    }
+  }
+  return null;
+}
+
+function explicitPotPointCards(payload) {
+  const candidates = [
+    payload?.pot_point_cards,
+    payload?.potPointCards,
+    payload?.current_pot_cards,
+    payload?.currentPotCards,
+    payload?.pot_cards,
+    payload?.potCards,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return pointCardsFromList(candidate);
+  }
+  return null;
+}
+
+function resetPointCardState() {
+  state.pointCards = createEmptyPointCardState();
+}
+
+function syncPointCardState(nextPayload) {
+  const explicitWon = explicitWonPointCards(nextPayload);
+  const explicitPot = explicitPotPointCards(nextPayload);
+
+  if (explicitWon) {
+    state.pointCards.wonCards = explicitWon;
+    state.pointCards.currentPotCards = explicitPot || [];
+    return;
+  }
+
+  const prevPayload = state.payload;
+  if (!prevPayload) {
+    state.pointCards.currentPotCards = explicitPot || [];
+    return;
+  }
+
+  const prevMoveKey = moveFingerprint(prevPayload.last_move);
+  const nextMoveKey = moveFingerprint(nextPayload.last_move);
+  if (nextPayload.last_move && !nextPayload.last_move.is_pass && nextMoveKey && nextMoveKey !== prevMoveKey) {
+    const seen = new Set(state.pointCards.currentPotCards.map(cardFingerprint));
+    for (const card of pointCardsFromList(nextPayload.last_move.cards)) {
+      const fp = cardFingerprint(card);
+      if (!seen.has(fp)) {
+        state.pointCards.currentPotCards.push(card);
+        seen.add(fp);
+      }
+    }
+  }
+
+  const prevScores = currentScores(prevPayload);
+  const nextScores = currentScores(nextPayload);
+  const potResolved = prevScores.pot > 0 && nextScores.pot === 0;
+  if (potResolved && state.pointCards.currentPotCards.length) {
+    const deltaYou = nextScores.you - prevScores.you;
+    const deltaBot = nextScores.bot - prevScores.bot;
+    const potValue = pointCardsTotal(state.pointCards.currentPotCards);
+    let winner = null;
+
+    if (deltaYou > deltaBot && deltaYou >= potValue) winner = 'you';
+    else if (deltaBot > deltaYou && deltaBot >= potValue) winner = 'bot';
+    else if (deltaYou > 0 && deltaBot <= 0) winner = 'you';
+    else if (deltaBot > 0 && deltaYou <= 0) winner = 'bot';
+
+    if (winner) {
+      state.pointCards.wonCards[winner].push(...state.pointCards.currentPotCards.map(cloneCard));
+    }
+    state.pointCards.currentPotCards = [];
+  }
+
+  if (explicitPot) {
+    state.pointCards.currentPotCards = explicitPot;
+  }
+}
+
+function ensurePointCardPiles() {
+  if (els.opponentHand && !document.getElementById('opponent-point-pile-wrap')) {
+    const wrap = document.createElement('div');
+    wrap.id = 'opponent-point-pile-wrap';
+    wrap.className = 'point-pile-wrap point-pile-wrap-opponent is-empty';
+    wrap.innerHTML = `
+      <div class="point-pile-label">Point cards won</div>
+      <div id="opponent-point-pile" class="point-pile" aria-label="Bot won point cards"></div>
+    `;
+    els.opponentHand.parentNode.insertBefore(wrap, els.opponentHand);
+    els.opponentPointPile = wrap.querySelector('.point-pile');
+    els.opponentPointPileWrap = wrap;
+  }
+
+  if (els.humanHand && !document.getElementById('human-point-pile-wrap')) {
+    const wrap = document.createElement('div');
+    wrap.id = 'human-point-pile-wrap';
+    wrap.className = 'point-pile-wrap point-pile-wrap-human is-empty';
+    wrap.innerHTML = `
+      <div class="point-pile-label">Point cards won</div>
+      <div id="human-point-pile" class="point-pile" aria-label="Your won point cards"></div>
+    `;
+    els.humanHand.parentNode.insertBefore(wrap, els.humanHand);
+    els.humanPointPile = wrap.querySelector('.point-pile');
+    els.humanPointPileWrap = wrap;
+  }
+}
+
+function renderPointCardPile(side, cards, pileEl, wrapEl) {
+  if (!pileEl || !wrapEl) return;
+  wrapEl.classList.toggle('is-empty', !cards.length);
+  pileEl.innerHTML = '';
+  if (!cards.length) {
+    pileEl.style.width = '';
+    return;
+  }
+
+  const step = cards.length >= 8 ? 13 : 16;
+  pileEl.style.width = `${Math.max(44, 44 + (cards.length - 1) * step)}px`;
+  cards.forEach((rawCard, index) => {
+    const cardEl = createCardElement(rawCard, { extraClasses: ['point-stack-card'] });
+    cardEl.style.left = `${index * step}px`;
+    cardEl.style.zIndex = String(index + 1);
+    pileEl.appendChild(cardEl);
+  });
+}
+
+function renderPointCardPiles() {
+  renderPointCardPile('bot', state.pointCards.wonCards.bot || [], els.opponentPointPile, els.opponentPointPileWrap);
+  renderPointCardPile('you', state.pointCards.wonCards.you || [], els.humanPointPile, els.humanPointPileWrap);
+}
+
+
 function ensureCoffeeButton() {
   const topControls = document.querySelector('.top-controls');
   if (!topControls || document.getElementById('coffee-btn')) return;
@@ -122,8 +338,8 @@ function ensureCoffeeButton() {
   button.type = 'button';
   button.id = 'coffee-btn';
   button.className = 'coffee-btn';
-  button.setAttribute('aria-label', '');
-  button.innerHTML = '<span class="coffee-btn-icon" aria-hidden="true">☕</span>';
+  button.setAttribute('aria-label', 'Buy me a coffee');
+  button.innerHTML = '<span class="coffee-btn-icon" aria-hidden="true">☕</span><span>Buy me a coffee</span>';
   button.addEventListener('click', () => {
     window.open(COFFEE_URL, '_blank', 'noopener,noreferrer');
   });
@@ -414,6 +630,7 @@ function createCardElement(rawCard, options = {}) {
   const clickable = !!options.clickable;
   const playable = !!options.playable;
   const selected = !!options.selected;
+  const extraClasses = Array.isArray(options.extraClasses) ? options.extraClasses : [];
   const card = displayCard(rawCard);
 
   const wrapper = document.createElement('div');
@@ -424,6 +641,7 @@ function createCardElement(rawCard, options = {}) {
     clickable ? 'clickable' : '',
     playable ? 'playable' : '',
     selected ? 'selected' : '',
+    ...extraClasses,
   ].filter(Boolean).join(' ');
 
   wrapper.innerHTML = `
@@ -467,6 +685,7 @@ async function api(path, body, method = 'POST') {
 }
 
 function applyPayload(payload) {
+  syncPointCardState(payload);
   state.payload = payload;
   state.sessionId = payload.session_id || payload.game_id || state.sessionId;
 }
@@ -507,6 +726,7 @@ function render() {
   const payload = state.payload;
   if (!payload) return;
 
+  ensurePointCardPiles();
   setWaitingForBackend(false);
   renderStaticDrawPile();
 
@@ -539,6 +759,8 @@ function render() {
   for (let i = 0; i < (payload.opponent_card_count || 0); i += 1) {
     els.opponentHand.appendChild(createFaceDownCard());
   }
+
+  renderPointCardPiles();
 
   els.tableCards.innerHTML = '';
   els.tableCards.classList.toggle('empty-state', !(payload.last_move && !payload.last_move.is_pass));
@@ -595,6 +817,7 @@ async function loadHealth() {
 async function startNewGame() {
   clearBotDelay();
   blurControls();
+  resetPointCardState();
   state.requestInFlight = true;
   render();
   try {
@@ -689,6 +912,7 @@ els.clearBtn.addEventListener('click', () => {
   setWaitingForBackend(true);
   ensureIntroOverlay();
   ensureCoffeeButton();
+  ensurePointCardPiles();
 })();
 
 (async function init() {
