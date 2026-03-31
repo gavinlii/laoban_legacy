@@ -1585,165 +1585,18 @@ select,
   }
 }
 
-/* Wide desktop aspect-ratio compensation: keep the fixed-height layout,
-   but scale cards and vertical rhythm down on extra-wide monitors so the
-   center controls never collide with the human hand. */
-@media (min-width: 981px) and (min-aspect-ratio: 19/10) {
-  :root {
-    --card-w: clamp(80px, 8.3dvh, 88px);
-    --card-h: clamp(112px, 11.6dvh, 123px);
-    --card-gap: clamp(6px, 0.7dvh, 8px);
-    --deck-col-w: clamp(156px, 9.8vw, 178px);
-    --point-rail-w: clamp(292px, 18vw, 336px);
-  }
 
-  .table-panel {
-    padding: 8px 14px 14px;
-    row-gap: 5px;
-  }
-
-  .sidebar {
-    padding: 10px 10px 12px;
-    gap: 8px;
-  }
-
-  .opponent-area {
-    min-height: calc(var(--card-shell-h) + 18px);
-    gap: 0;
-  }
-
-  .status-center {
-    padding-top: 8px;
-    gap: 6px;
-  }
-
-  .status-chip {
-    min-width: 300px;
-    padding: 10px 20px 12px;
-  }
-
-  #status {
-    font-size: 21px;
-  }
-
-  #turn,
-  #wins {
-    font-size: 11px;
-    line-height: 1.35;
-  }
-
-  .last-move {
-    font-size: 16px;
-    min-height: 20px;
-  }
-
-  .table-type,
-  .result {
-    font-size: 17px;
-  }
-
-  .table-row {
-    min-height: max(120px, calc(var(--card-shell-h) + 10px));
-    gap: 6px;
-  }
-
-  .center-controls {
-    gap: 8px;
-  }
-
-  .center-controls button {
-    padding: 7px 12px;
-  }
-
-  .human-area {
-    gap: 2px;
+/* Desktop baseline centering tweak from attached version:
+   keep everything else identical, but center the draw pile and the
+   central play-status stack vertically within the playing surface. */
+@media (min-width: 981px) {
+  .deck-stack {
+    align-self: center;
     padding-top: 0;
   }
 
-  .human-area h2 {
-    font-size: 18px;
-  }
-
-  #human-hand.card-row {
-    padding-bottom: 2px;
-  }
-
-  .hint {
-    font-size: 10px;
-  }
-
-  .deck-stack {
-    width: calc(var(--card-w) + 58px);
-    padding-top: 24px;
-  }
-
-  .deck-cards {
-    width: calc(var(--card-w) + 58px);
-    height: calc(var(--card-shell-h) + 26px);
-  }
-
-  .deck-cards .offset-a {
-    left: calc(var(--card-w) * 0.22);
-    top: calc(var(--card-h) * 0.14);
-  }
-
-  .deck-cards .offset-b {
-    left: calc(var(--card-w) * 0.31);
-    top: calc(var(--card-h) * 0.08);
-  }
-
-  .deck-cards .offset-c {
-    left: calc(var(--card-w) * 0.40);
-    top: 2px;
-  }
-
-  .point-rail {
-    padding-top: 18px;
-    gap: 26px;
-  }
-
-  .point-pile-label {
-    margin-bottom: 8px;
-    font-size: 10px;
-  }
-}
-
-@media (min-width: 981px) and (min-aspect-ratio: 21/10) {
-  :root {
-    --card-w: clamp(76px, 7.8dvh, 84px);
-    --card-h: clamp(106px, 10.9dvh, 118px);
-    --deck-col-w: clamp(148px, 9vw, 168px);
-    --point-rail-w: clamp(276px, 17vw, 316px);
-  }
-
-  .status-chip {
-    min-width: 286px;
-    padding: 9px 18px 11px;
-  }
-
-  #status {
-    font-size: 20px;
-  }
-
-  .opponent-area {
-    min-height: calc(var(--card-shell-h) + 12px);
-  }
-
-  .table-row {
-    min-height: max(112px, calc(var(--card-shell-h) + 2px));
-    gap: 5px;
-  }
-
-  .human-area h2 {
-    font-size: 17px;
-  }
-
-  .moves {
-    flex-basis: 204px;
-    max-height: 204px;
-  }
-
-  .log {
-    font-size: 10px;
+  .status-center {
+    justify-content: center;
+    padding-top: 0;
   }
 }
