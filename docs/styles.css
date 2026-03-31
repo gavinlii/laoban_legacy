@@ -1644,22 +1644,30 @@ select,
   }
 }
 
-@media (min-width: 981px) {
-  .last-move.condensed-last-move-hidden {
-    min-height: 0;
-    height: 0;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-  }
+/* Condensed active move display: hide the old "Last move: None" line entirely,
+   and reuse that slot for the single gold move label positioned between the old
+   last-move line and the card row. */
+.last-move.hidden-line {
+  display: none;
+}
 
-  .table-row.condensed-last-move .condensed-last-move-label {
-    color: var(--accent);
-    font-size: 19px;
-    font-weight: 800;
-    letter-spacing: .04em;
-    line-height: 1.05;
-    text-align: center;
-    transform: translateY(3px);
-  }
+.last-move.condensed-active-move-line {
+  display: block;
+  color: var(--accent);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  line-height: 1.1;
+  text-align: center;
+  min-height: 24px;
+  margin: 0;
+  transform: translateY(clamp(8px, 1.1vh, 12px));
+}
+
+.result:empty {
+  display: none;
+}
+
+.table-play-row.condensed-active-row {
+  margin-top: 0;
 }

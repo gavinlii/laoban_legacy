@@ -815,11 +815,10 @@ function render() {
   els.wins.textContent = `Wins - You: ${payload.wins?.you ?? 0} · Bot: ${payload.wins?.bot ?? 0}`;
   els.deckSize.textContent = `${payload.deck_size} card${payload.deck_size === 1 ? '' : 's'}`;
   els.opponentStatus.textContent = `Cards in hand: ${payload.opponent_card_count}`;
-  els.lastMove.textContent = '';
+  els.lastMove.textContent = hasActiveMove ? payload.last_move.label.toUpperCase() : '';
   els.lastMove.classList.toggle('hidden-line', !hasActiveMove);
-  els.lastMove.classList.toggle('condensed-spacer', hasActiveMove);
-  els.result.textContent = hasActiveMove ? payload.last_move.label.toUpperCase() : (payload.result || '');
-  els.result.classList.toggle('condensed-active-move', hasActiveMove);
+  els.lastMove.classList.toggle('condensed-active-move-line', hasActiveMove);
+  els.result.textContent = payload.result || '';
   els.selection.textContent = payload.pending_bot_turn ? '' : selectedMoveText();
   els.log.textContent = (payload.log || []).join('\n');
 
@@ -846,7 +845,7 @@ function render() {
   els.tableCards.classList.toggle('empty-state', !hasActiveMove);
   if (hasActiveMove) {
     const row = document.createElement('div');
-    row.className = 'card-row table-play-row';
+    row.className = 'card-row table-play-row condensed-active-row';
     for (const card of payload.last_move.cards) row.appendChild(createCardElement(card));
     els.tableCards.appendChild(row);
   } else {
