@@ -1615,3 +1615,15 @@ select,
     transform: translateX(calc(var(--table-axis-shift) * -1)) translateY(clamp(10px, 1.2vh, 16px));
   }
 }
+
+@media (min-width: 981px) {
+  .opponent-area h2 {
+    margin-bottom: 6px;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 920px) {
+  .opponent-area h2 {
+    margin-bottom: 5px;
+  }
+}
