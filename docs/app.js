@@ -375,11 +375,36 @@ function renderPointCardPile(side, cards, pileEl, wrapEl) {
   if (!pileEl || !wrapEl) return;
   wrapEl.classList.toggle('is-empty', !cards.length);
   pileEl.innerHTML = '';
-  if (!cards.length) return;
+  if (!cards.length) {
+    pileEl.style.width = '';
+    pileEl.style.height = '';
+    return;
+  }
+
+  const rootStyles = getComputedStyle(document.documentElement);
+  const cardW = parseFloat(rootStyles.getPropertyValue('--card-w')) || 90;
+  const cardH = (parseFloat(rootStyles.getPropertyValue('--card-h')) || 126)
+    + (parseFloat(rootStyles.getPropertyValue('--lift-top')) || 12)
+    + (parseFloat(rootStyles.getPropertyValue('--lift-bottom')) || 8);
+
+  const stepX = Math.max(34, Math.round(cardW * 0.38));
+  const stepY = Math.max(56, Math.round(cardH * 0.38));
+  const availableWidth = Math.max(cardW, wrapEl.clientWidth || pileEl.clientWidth || 0);
+  const fitPerRow = Math.max(1, Math.floor((availableWidth - cardW) / stepX) + 1);
+  const perRow = Math.max(1, Math.min(6, fitPerRow));
+  const rows = Math.ceil(cards.length / perRow);
+  const cols = Math.min(perRow, cards.length);
+
+  pileEl.style.width = `${cardW + (cols - 1) * stepX}px`;
+  pileEl.style.height = `${cardH + (rows - 1) * stepY}px`;
 
   cards.forEach((rawCard, index) => {
     const cardEl = createCardElement(rawCard, { extraClasses: ['point-stack-card'] });
-    cardEl.style.zIndex = String(index + 1);
+    const col = index % perRow;
+    const row = Math.floor(index / perRow);
+    cardEl.style.left = `${col * stepX}px`;
+    cardEl.style.top = `${row * stepY}px`;
+    cardEl.style.zIndex = String(row * 100 + col + 1);
     pileEl.appendChild(cardEl);
   });
 }
@@ -568,11 +593,6 @@ function polygonPoints(inset = 0) {
 function frontBaseSvg(card) {
   const topIcon = card.suitText || '★';
   const topColor = card.suitText ? card.suitFill : '#b88928';
-  const isFaceCard = [11, 12, 13].includes(card.rank);
-  const faceCornerSuit = isFaceCard ? `
-    ${svgText({ x: 39, y: 26, text: topIcon, fill: topColor, size: 9.4, weight: 700, anchor: 'middle', baseline: 'middle', family: 'Georgia, Times New Roman, serif' })}
-    ${svgText({ x: 61, y: 114, text: topIcon, fill: topColor, size: 9.4, weight: 700, anchor: 'middle', baseline: 'middle', rotate: 180, family: 'Georgia, Times New Roman, serif' })}
-  ` : '';
   return `
     <polygon points="${polygonPoints(0)}" fill="#fff9ec" stroke="#45614f" stroke-width="0"/>
     <polygon points="${polygonPoints(2)}" fill="#fff9ec" stroke="#d9d2c2" stroke-width="1.6"/>
@@ -581,7 +601,6 @@ function frontBaseSvg(card) {
     <line x1="14" y1="24" x2="14" y2="116" stroke="#d4cdbc" stroke-width="1.4" stroke-linecap="round"/>
     <line x1="86" y1="24" x2="86" y2="116" stroke="#d4cdbc" stroke-width="1.4" stroke-linecap="round"/>
     ${svgText({ x: 26, y: 26, text: card.rankLabel, fill: card.suitFill, size: 12, weight: 800, anchor: 'middle', baseline: 'middle' })}
-    ${faceCornerSuit}
     ${svgText({ x: 26, y: 41, text: topIcon, fill: topColor, size: 12, weight: 700, anchor: 'middle', baseline: 'middle', family: 'Georgia, Times New Roman, serif' })}
     ${svgText({ x: 74, y: 114, text: card.rankLabel, fill: card.suitFill, size: 12, weight: 800, anchor: 'middle', baseline: 'middle', rotate: 180 })}
     ${svgText({ x: 74, y: 99, text: topIcon, fill: topColor, size: 12, weight: 700, anchor: 'middle', baseline: 'middle', rotate: 180, family: 'Georgia, Times New Roman, serif' })}
