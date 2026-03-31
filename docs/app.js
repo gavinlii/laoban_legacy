@@ -74,6 +74,26 @@ const POINT_CARD_SIDE_KEYS = {
   you: ['you', 'human', 'self', 'player0', 'p0'],
   bot: ['bot', 'opponent', 'opp', 'player1', 'p1'],
 };
+const DIRECT_WON_POINT_CARD_KEYS = {
+  you: [
+    'you_captured_point_cards', 'youCapturedPointCards',
+    'human_captured_point_cards', 'humanCapturedPointCards',
+    'self_captured_point_cards', 'selfCapturedPointCards',
+    'you_won_point_cards', 'youWonPointCards',
+    'human_won_point_cards', 'humanWonPointCards',
+    'your_point_cards_won', 'yourPointCardsWon',
+    'point_cards_won_you', 'pointCardsWonYou',
+  ],
+  bot: [
+    'bot_captured_point_cards', 'botCapturedPointCards',
+    'opponent_captured_point_cards', 'opponentCapturedPointCards',
+    'opp_captured_point_cards', 'oppCapturedPointCards',
+    'bot_won_point_cards', 'botWonPointCards',
+    'opponent_won_point_cards', 'opponentWonPointCards',
+    'bot_point_cards_won', 'botPointCardsWon',
+    'point_cards_won_bot', 'pointCardsWonBot',
+  ],
+};
 
 function createEmptyPointCardState() {
   return {
@@ -179,6 +199,19 @@ function extractSideCardList(bucket, side) {
 }
 
 function explicitWonPointCards(payload) {
+  const direct = {
+    you: DIRECT_WON_POINT_CARD_KEYS.you.find((key) => Array.isArray(payload?.[key])) ?
+      pointCardsFromList(payload[DIRECT_WON_POINT_CARD_KEYS.you.find((key) => Array.isArray(payload?.[key]))]) : null,
+    bot: DIRECT_WON_POINT_CARD_KEYS.bot.find((key) => Array.isArray(payload?.[key])) ?
+      pointCardsFromList(payload[DIRECT_WON_POINT_CARD_KEYS.bot.find((key) => Array.isArray(payload?.[key]))]) : null,
+  };
+  if (direct.you || direct.bot) {
+    return {
+      you: direct.you || [],
+      bot: direct.bot || [],
+    };
+  }
+
   const buckets = [
     payload?.captured_point_cards,
     payload?.capturedPointCards,
@@ -220,6 +253,52 @@ function explicitPotPointCards(payload) {
   return null;
 }
 
+
+function inferWinnerFromTurn(payload) {
+  return payload?.turn === 'you' || payload?.turn === 'bot' ? payload.turn : null;
+}
+
+function inferWinnerFromResult(payload) {
+  const result = `${payload?.result || ''}`.toLowerCase();
+  if (!result) return null;
+  if (/you/.test(result) && /(win|won|wins|take|takes|captur|collect)/.test(result)) return 'you';
+  if (/bot/.test(result) && /(win|won|wins|take|takes|captur|collect)/.test(result)) return 'bot';
+  return null;
+}
+
+function inferWinnerFromLog(prevPayload, nextPayload) {
+  const prevLog = Array.isArray(prevPayload?.log) ? prevPayload.log : [];
+  const nextLog = Array.isArray(nextPayload?.log) ? nextPayload.log : [];
+  const appended = nextLog.slice(prevLog.length).concat(nextLog.slice(-3));
+  for (let i = appended.length - 1; i >= 0; i -= 1) {
+    const line = `${appended[i] || ''}`.toLowerCase();
+    if (!line) continue;
+    if (/you/.test(line) && /(win|won|wins|take|takes|captur|collect)/.test(line)) return 'you';
+    if (/bot/.test(line) && /(win|won|wins|take|takes|captur|collect)/.test(line)) return 'bot';
+  }
+  return null;
+}
+
+function inferPotWinner(prevPayload, nextPayload, currentPotCards) {
+  const nextTurnWinner = inferWinnerFromTurn(nextPayload);
+  if (nextTurnWinner) return nextTurnWinner;
+
+  const prevScores = currentScores(prevPayload);
+  const nextScores = currentScores(nextPayload);
+  const deltaYou = nextScores.you - prevScores.you;
+  const deltaBot = nextScores.bot - prevScores.bot;
+  const potValue = pointCardsTotal(currentPotCards);
+  if (deltaYou > deltaBot && (potValue <= 0 || deltaYou >= potValue || deltaBot <= 0)) return 'you';
+  if (deltaBot > deltaYou && (potValue <= 0 || deltaBot >= potValue || deltaYou <= 0)) return 'bot';
+  if (deltaYou > 0 && deltaBot <= 0) return 'you';
+  if (deltaBot > 0 && deltaYou <= 0) return 'bot';
+
+  const logWinner = inferWinnerFromLog(prevPayload, nextPayload);
+  if (logWinner) return logWinner;
+
+  return inferWinnerFromResult(nextPayload);
+}
+
 function resetPointCardState() {
   state.pointCards = createEmptyPointCardState();
 }
@@ -257,16 +336,7 @@ function syncPointCardState(nextPayload) {
   const nextScores = currentScores(nextPayload);
   const potResolved = prevScores.pot > 0 && nextScores.pot === 0;
   if (potResolved && state.pointCards.currentPotCards.length) {
-    const deltaYou = nextScores.you - prevScores.you;
-    const deltaBot = nextScores.bot - prevScores.bot;
-    const potValue = pointCardsTotal(state.pointCards.currentPotCards);
-    let winner = null;
-
-    if (deltaYou > deltaBot && deltaYou >= potValue) winner = 'you';
-    else if (deltaBot > deltaYou && deltaBot >= potValue) winner = 'bot';
-    else if (deltaYou > 0 && deltaBot <= 0) winner = 'you';
-    else if (deltaBot > 0 && deltaYou <= 0) winner = 'bot';
-
+    const winner = inferPotWinner(prevPayload, nextPayload, state.pointCards.currentPotCards);
     if (winner) {
       state.pointCards.wonCards[winner].push(...state.pointCards.currentPotCards.map(cloneCard));
     }
@@ -307,19 +377,24 @@ function renderPointCardPile(side, cards, pileEl, wrapEl) {
   pileEl.innerHTML = '';
   if (!cards.length) {
     pileEl.style.width = '';
+    pileEl.style.height = '';
     return;
   }
 
-  const minWidth = 58;
-  const maxWidth = 156;
-  const maxStep = 24;
-  const step = cards.length > 1
-    ? Math.max(12, Math.min(maxStep, Math.floor((maxWidth - minWidth) / (cards.length - 1))))
-    : 0;
-  pileEl.style.width = `${Math.min(maxWidth, minWidth + (cards.length - 1) * step)}px`;
+  const perRow = 3;
+  const stepX = 62;
+  const stepY = 46;
+  const rows = Math.ceil(cards.length / perRow);
+  const cols = Math.min(perRow, cards.length);
+  pileEl.style.width = `${62 * (cols - 1) + 80}px`;
+  pileEl.style.height = `${46 * (rows - 1) + 111}px`;
+
   cards.forEach((rawCard, index) => {
     const cardEl = createCardElement(rawCard, { extraClasses: ['point-stack-card'] });
-    cardEl.style.left = `${index * step}px`;
+    const col = index % perRow;
+    const row = Math.floor(index / perRow);
+    cardEl.style.left = `${col * stepX}px`;
+    cardEl.style.top = `${row * stepY}px`;
     cardEl.style.zIndex = String(index + 1);
     pileEl.appendChild(cardEl);
   });
