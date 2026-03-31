@@ -1300,3 +1300,93 @@ select,
     min-height: 150px;
   }
 }
+
+
+/* Desktop viewport lock: keep the playing surface height constant and let the action log scroll inside it. */
+@media (min-width: 981px) {
+  body {
+    overflow: hidden;
+  }
+
+  .page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: 14px;
+    padding-bottom: 4px;
+  }
+
+  .topbar {
+    margin-bottom: 10px;
+  }
+
+  .meta {
+    margin-bottom: 10px;
+  }
+
+  .layout {
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .table-panel,
+  .sidebar {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .table-panel {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .sidebar {
+    grid-template-rows: auto minmax(0, 1fr);
+    align-self: stretch;
+  }
+
+  .log-wrap {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .log {
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 1100px) {
+  body {
+    overflow: hidden;
+  }
+
+  .page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: 12px;
+    padding-bottom: 4px;
+  }
+
+  .table-panel,
+  .sidebar {
+    overflow: hidden;
+  }
+
+  .log {
+    max-height: none;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 920px) {
+  .page {
+    padding-top: 10px;
+    padding-bottom: 3px;
+  }
+}

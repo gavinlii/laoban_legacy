@@ -806,6 +806,13 @@ function blurControls() {
   }
 }
 
+function scrollLogToBottom() {
+  if (!els.log) return;
+  window.requestAnimationFrame(() => {
+    els.log.scrollTop = els.log.scrollHeight;
+  });
+}
+
 function render() {
   const payload = state.payload;
   if (!payload) return;
@@ -826,6 +833,7 @@ function render() {
   els.result.textContent = payload.result || '';
   els.selection.textContent = payload.pending_bot_turn ? '' : selectedMoveText();
   els.log.textContent = (payload.log || []).join('\n');
+  scrollLogToBottom();
 
   els.humanHand.innerHTML = '';
   for (const rawCard of payload.human_hand || []) {
