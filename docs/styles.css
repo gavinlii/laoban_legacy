@@ -1585,18 +1585,19 @@ select,
   }
 }
 
-
-/* Desktop baseline centering tweak from attached version:
-   keep everything else identical, but center the draw pile and the
-   central play-status stack vertically within the playing surface. */
+/* Desktop central stack adjustment from attached baseline:
+   keep the draw pile as-is, and move the scorebug -> selection stack
+   downward as a group to reduce the deadspace above the human hand. */
 @media (min-width: 981px) {
-  .deck-stack {
-    align-self: center;
-    padding-top: 0;
-  }
-
   .status-center {
     justify-content: center;
     padding-top: 0;
+    transform: translateY(clamp(56px, 7vh, 92px));
+  }
+}
+
+@media (min-width: 981px) and (max-height: 920px) {
+  .status-center {
+    transform: translateY(clamp(34px, 5vh, 60px));
   }
 }
