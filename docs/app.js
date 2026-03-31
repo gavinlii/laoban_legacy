@@ -808,16 +808,18 @@ function render() {
 
   const scores = currentScores(payload);
   const playableKeys = new Set(payload.playable_card_keys || []);
-  const activeTableMove = !!(payload.last_move && !payload.last_move.is_pass);
+  const hasActiveMove = !!(payload.last_move && !payload.last_move.is_pass);
   els.status.textContent = `You ${scores.you} · Bot ${scores.bot} · Pot ${scores.pot}`;
   const turnLabel = payload.turn === 'you' ? 'You' : payload.turn === 'bot' ? 'Bot' : 'Game Over';
   els.turn.textContent = `Turn: ${turnLabel} · Hand type: ${payload.hand_type || 'open'}`;
   els.wins.textContent = `Wins - You: ${payload.wins?.you ?? 0} · Bot: ${payload.wins?.bot ?? 0}`;
   els.deckSize.textContent = `${payload.deck_size} card${payload.deck_size === 1 ? '' : 's'}`;
   els.opponentStatus.textContent = `Cards in hand: ${payload.opponent_card_count}`;
-  els.lastMove.textContent = activeTableMove ? '' : `Last move: ${payload.last_move ? payload.last_move.label : 'None'}`;
-  els.lastMove.classList.toggle('condensed-last-move-hidden', activeTableMove);
-  els.result.textContent = payload.result || '';
+  els.lastMove.textContent = '';
+  els.lastMove.classList.toggle('hidden-line', !hasActiveMove);
+  els.lastMove.classList.toggle('condensed-spacer', hasActiveMove);
+  els.result.textContent = hasActiveMove ? payload.last_move.label.toUpperCase() : (payload.result || '');
+  els.result.classList.toggle('condensed-active-move', hasActiveMove);
   els.selection.textContent = payload.pending_bot_turn ? '' : selectedMoveText();
   els.log.textContent = (payload.log || []).join('\n');
 
@@ -841,13 +843,8 @@ function render() {
   renderPointCardPiles();
 
   els.tableCards.innerHTML = '';
-  els.tableCards.classList.toggle('empty-state', !activeTableMove);
-  els.tableCards.classList.toggle('condensed-last-move', activeTableMove);
-  if (activeTableMove) {
-    const typeLabel = document.createElement('div');
-    typeLabel.className = 'table-type condensed-last-move-label';
-    typeLabel.textContent = payload.last_move.label.toUpperCase();
-    els.tableCards.appendChild(typeLabel);
+  els.tableCards.classList.toggle('empty-state', !hasActiveMove);
+  if (hasActiveMove) {
     const row = document.createElement('div');
     row.className = 'card-row table-play-row';
     for (const card of payload.last_move.cards) row.appendChild(createCardElement(card));

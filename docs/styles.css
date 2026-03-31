@@ -1644,22 +1644,33 @@ select,
   }
 }
 
-@media (min-width: 981px) {
-  .last-move.condensed-last-move-hidden {
-    min-height: 0;
-    height: 0;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-  }
+/* Condensed active-move display:
+   - hide the old "Last move: None" line completely when there is no active move
+   - use a small spacer when there is an active move so the gold condensed line sits midway
+     between the old last-move line and the old type line */
+.last-move.hidden-line {
+  display: none;
+}
 
-  .table-row.condensed-last-move .condensed-last-move-label {
-    color: var(--accent);
-    font-size: 19px;
-    font-weight: 800;
-    letter-spacing: .04em;
-    line-height: 1.05;
-    text-align: center;
-    transform: translateY(15px);
-  }
+.last-move.condensed-spacer {
+  display: block;
+  min-height: 8px;
+  height: 8px;
+  margin: 0;
+  font-size: 0;
+  line-height: 0;
+}
+
+.result:empty {
+  display: none;
+}
+
+.result.condensed-active-move {
+  min-height: 24px;
+  color: var(--accent);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  line-height: 1.1;
+  text-align: center;
 }
