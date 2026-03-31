@@ -1683,3 +1683,17 @@ select,
 .table-play-row.condensed-active-row {
   margin-top: 0;
 }
+
+
+/* Re-apply the selection midpoint tune without changing any other layout behavior. */
+@media (min-width: 981px) {
+  .selection {
+    transform: translateY(8px);
+  }
+}
+
+@media (min-width: 981px) and (max-height: 920px) {
+  .selection {
+    transform: translateY(6px);
+  }
+}
