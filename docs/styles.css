@@ -1630,17 +1630,29 @@ select,
 
 @media (min-width: 981px) {
   .center-controls {
-    margin-bottom: 14px;
+    margin-top: 8px;
+    margin-bottom: 16px;
   }
 
   .selection {
     min-height: 20px;
     text-align: center;
-    margin: 0 0 14px;
+    margin: 0 0 16px;
   }
 
   .human-area {
     padding-top: 0;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 920px) {
+  .center-controls {
+    margin-top: 6px;
+    margin-bottom: 14px;
+  }
+
+  .selection {
+    margin: 0 0 14px;
   }
 }
 
