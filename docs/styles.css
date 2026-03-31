@@ -1456,3 +1456,30 @@ select,
     max-height: 196px;
   }
 }
+
+
+/* Desktop vertical balance tweak: shift the whole page slightly downward and use more of the bottom edge without changing the fixed in-game panel heights. */
+@media (min-width: 981px) {
+  .page {
+    margin-top: 10px;
+    height: calc(100dvh - 10px);
+    padding-top: 6px;
+    padding-bottom: 0;
+  }
+
+  .meta {
+    margin-bottom: 12px;
+  }
+
+  .layout {
+    margin-top: 2px;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 920px) {
+  .page {
+    margin-top: 8px;
+    height: calc(100dvh - 8px);
+    padding-top: 4px;
+  }
+}
