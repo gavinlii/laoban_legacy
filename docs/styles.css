@@ -1627,3 +1627,19 @@ select,
     margin-bottom: 5px;
   }
 }
+
+@media (min-width: 981px) {
+  .center-controls {
+    margin-bottom: 14px;
+  }
+
+  .selection {
+    min-height: 20px;
+    text-align: center;
+    margin: 0 0 14px;
+  }
+
+  .human-area {
+    padding-top: 0;
+  }
+}
