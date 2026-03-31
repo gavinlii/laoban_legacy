@@ -375,26 +375,10 @@ function renderPointCardPile(side, cards, pileEl, wrapEl) {
   if (!pileEl || !wrapEl) return;
   wrapEl.classList.toggle('is-empty', !cards.length);
   pileEl.innerHTML = '';
-  if (!cards.length) {
-    pileEl.style.width = '';
-    pileEl.style.height = '';
-    return;
-  }
-
-  const perRow = 3;
-  const stepX = 62;
-  const stepY = 46;
-  const rows = Math.ceil(cards.length / perRow);
-  const cols = Math.min(perRow, cards.length);
-  pileEl.style.width = `${62 * (cols - 1) + 80}px`;
-  pileEl.style.height = `${46 * (rows - 1) + 111}px`;
+  if (!cards.length) return;
 
   cards.forEach((rawCard, index) => {
     const cardEl = createCardElement(rawCard, { extraClasses: ['point-stack-card'] });
-    const col = index % perRow;
-    const row = Math.floor(index / perRow);
-    cardEl.style.left = `${col * stepX}px`;
-    cardEl.style.top = `${row * stepY}px`;
     cardEl.style.zIndex = String(index + 1);
     pileEl.appendChild(cardEl);
   });
@@ -414,8 +398,8 @@ function ensureCoffeeButton() {
   button.type = 'button';
   button.id = 'coffee-btn';
   button.className = 'coffee-btn';
-  button.setAttribute('aria-label', 'Buy me a coffee');
-  button.innerHTML = '<span class="coffee-btn-icon" aria-hidden="true">☕</span><span>Buy me a coffee</span>';
+  button.setAttribute('aria-label', '');
+  button.innerHTML = '<span class="coffee-btn-icon" aria-hidden="true">☕</span><span></span>';
   button.addEventListener('click', () => {
     window.open(COFFEE_URL, '_blank', 'noopener,noreferrer');
   });
@@ -584,6 +568,11 @@ function polygonPoints(inset = 0) {
 function frontBaseSvg(card) {
   const topIcon = card.suitText || '★';
   const topColor = card.suitText ? card.suitFill : '#b88928';
+  const isFaceCard = [11, 12, 13].includes(card.rank);
+  const faceCornerSuit = isFaceCard ? `
+    ${svgText({ x: 39, y: 26, text: topIcon, fill: topColor, size: 9.4, weight: 700, anchor: 'middle', baseline: 'middle', family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 61, y: 114, text: topIcon, fill: topColor, size: 9.4, weight: 700, anchor: 'middle', baseline: 'middle', rotate: 180, family: 'Georgia, Times New Roman, serif' })}
+  ` : '';
   return `
     <polygon points="${polygonPoints(0)}" fill="#fff9ec" stroke="#45614f" stroke-width="0"/>
     <polygon points="${polygonPoints(2)}" fill="#fff9ec" stroke="#d9d2c2" stroke-width="1.6"/>
@@ -592,6 +581,7 @@ function frontBaseSvg(card) {
     <line x1="14" y1="24" x2="14" y2="116" stroke="#d4cdbc" stroke-width="1.4" stroke-linecap="round"/>
     <line x1="86" y1="24" x2="86" y2="116" stroke="#d4cdbc" stroke-width="1.4" stroke-linecap="round"/>
     ${svgText({ x: 26, y: 26, text: card.rankLabel, fill: card.suitFill, size: 12, weight: 800, anchor: 'middle', baseline: 'middle' })}
+    ${faceCornerSuit}
     ${svgText({ x: 26, y: 41, text: topIcon, fill: topColor, size: 12, weight: 700, anchor: 'middle', baseline: 'middle', family: 'Georgia, Times New Roman, serif' })}
     ${svgText({ x: 74, y: 114, text: card.rankLabel, fill: card.suitFill, size: 12, weight: 800, anchor: 'middle', baseline: 'middle', rotate: 180 })}
     ${svgText({ x: 74, y: 99, text: topIcon, fill: topColor, size: 12, weight: 700, anchor: 'middle', baseline: 'middle', rotate: 180, family: 'Georgia, Times New Roman, serif' })}
