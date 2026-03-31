@@ -162,10 +162,10 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
 
 .table-panel {
   background: var(--table-green);
-  padding: 10px 16px 18px;
+  padding: 10px 16px 16px;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  row-gap: 10px;
+  row-gap: 6px;
   min-height: 0;
   overflow: hidden;
 }
@@ -208,7 +208,7 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
 
 #opponent-hand.card-row,
 #human-hand.card-row { min-height: var(--card-shell-h); }
-#human-hand.card-row { padding-bottom: 16px; }
+#human-hand.card-row { padding-bottom: 8px; }
 
 .table-center {
   display: grid;
@@ -225,13 +225,14 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
 
 .deck-stack {
   grid-column: 1;
-  align-self: center;
+  align-self: start;
   justify-self: start;
   width: 176px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  padding-top: 34px;
   background: transparent;
   border: 0;
 }
@@ -275,9 +276,10 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 0;
   gap: 8px;
+  padding-top: 12px;
 }
 
 .status-chip {
@@ -307,12 +309,12 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
 
 .table-row {
   width: 100%;
-  min-height: 170px;
+  min-height: 154px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .table-row.empty-state {
@@ -354,8 +356,8 @@ button.secondary:hover:not(:disabled) { background: #7f8d7e; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding-top: 2px;
+  gap: 4px;
+  padding-top: 4px;
 }
 
 .hint {
@@ -961,9 +963,10 @@ select,
 }
 
 
-@media (min-width: 981px) and (max-height: 980px) {
+@media (min-width: 981px) and (max-height: 1100px) {
   body {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .page {
@@ -984,13 +987,27 @@ select,
 
   .table-panel {
     overflow: visible;
-    padding: 8px 14px 14px;
+    padding: 8px 14px 12px;
   }
 
   .sidebar {
     overflow: visible;
     padding: 10px 10px 12px;
     gap: 8px;
+  }
+
+  .table-center {
+    align-items: start;
+    padding-top: 0;
+  }
+
+  .deck-stack {
+    padding-top: 12px;
+  }
+
+  .status-center {
+    padding-top: 4px;
+    gap: 6px;
   }
 
   .topbar {
@@ -1002,11 +1019,11 @@ select,
   }
 }
 
-@media (min-width: 981px) and (max-height: 900px) {
+@media (min-width: 981px) and (max-height: 1040px) {
   :root {
-    --card-w: 82px;
-    --card-h: 115px;
-    --lift-top: 11px;
+    --card-w: 80px;
+    --card-h: 112px;
+    --lift-top: 10px;
     --lift-bottom: 7px;
     --card-gap: 7px;
   }
@@ -1045,39 +1062,41 @@ select,
   }
 
   .table-center {
-    grid-template-columns: 172px minmax(0, 1fr) 320px;
+    grid-template-columns: 168px minmax(0, 1fr) 320px;
     padding-top: 0;
   }
 
   .deck-stack {
-    width: 164px;
+    width: 160px;
     gap: 6px;
+    padding-top: 8px;
   }
 
   .deck-cards {
-    width: 138px;
-    height: 160px;
+    width: 134px;
+    height: 156px;
   }
 
-  .deck-cards .offset-a { left: 16px; top: 16px; }
-  .deck-cards .offset-b { left: 24px; top: 8px; }
-  .deck-cards .offset-c { left: 32px; top: 0; }
+  .deck-cards .offset-a { left: 14px; top: 15px; }
+  .deck-cards .offset-b { left: 22px; top: 8px; }
+  .deck-cards .offset-c { left: 30px; top: 0; }
 
   .deck-count {
     padding: 6px 12px;
   }
 
   .status-center {
+    padding-top: 2px;
     gap: 6px;
   }
 
   .status-chip {
-    min-width: 280px;
-    padding: 10px 18px 12px;
+    min-width: 272px;
+    padding: 10px 18px 11px;
   }
 
   #status {
-    font-size: 21px;
+    font-size: 20px;
   }
 
   .last-move,
@@ -1087,16 +1106,17 @@ select,
   }
 
   .table-row {
-    min-height: 138px;
-    gap: 8px;
+    min-height: 128px;
+    gap: 7px;
   }
 
   .human-area {
     gap: 4px;
+    padding-top: 2px;
   }
 
   #human-hand.card-row {
-    padding-bottom: 10px;
+    padding-bottom: 6px;
   }
 
   .center-controls {
@@ -1120,7 +1140,7 @@ select,
 }
 
 @media (min-width: 1280px) and (min-aspect-ratio: 2/1) and (max-height: 920px),
-       (min-width: 981px) and (max-height: 820px) {
+       (min-width: 981px) and (max-height: 920px) {
   :root {
     --card-w: 76px;
     --card-h: 106px;
@@ -1199,8 +1219,8 @@ select,
   }
 
   .table-row {
-    min-height: 126px;
-    gap: 7px;
+    min-height: 118px;
+    gap: 6px;
   }
 
   .result,
@@ -1224,7 +1244,7 @@ select,
 }
 
 
-@media (min-width: 981px) and (max-height: 900px) {
+@media (min-width: 981px) and (max-height: 1040px) {
   .point-rail {
     width: 320px;
     padding: 6px 0 8px;
@@ -1232,20 +1252,20 @@ select,
   }
 
   .point-pile-wrap {
-    min-height: 182px;
+    min-height: 170px;
     gap: 8px;
   }
 }
 
 @media (min-width: 1280px) and (min-aspect-ratio: 2/1) and (max-height: 920px),
-       (min-width: 981px) and (max-height: 820px) {
+       (min-width: 981px) and (max-height: 920px) {
   .point-rail {
     width: 300px;
     gap: 16px;
   }
 
   .point-pile-wrap {
-    min-height: 168px;
+    min-height: 158px;
   }
 }
 
