@@ -1643,3 +1643,23 @@ select,
     padding-top: 0;
   }
 }
+
+@media (min-width: 981px) {
+  .last-move.condensed-last-move-hidden {
+    min-height: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .table-row.condensed-last-move .condensed-last-move-label {
+    color: var(--accent);
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    line-height: 1.05;
+    text-align: center;
+    transform: translateY(15px);
+  }
+}

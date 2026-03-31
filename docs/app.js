@@ -381,22 +381,13 @@ function renderPointCardPile(side, cards, pileEl, wrapEl) {
     return;
   }
 
-  const rootStyles = getComputedStyle(document.documentElement);
-  const cardW = parseFloat(rootStyles.getPropertyValue('--card-w')) || 90;
-  const cardShellH = (parseFloat(rootStyles.getPropertyValue('--card-h')) || 126)
-    + (parseFloat(rootStyles.getPropertyValue('--lift-top')) || 12)
-    + (parseFloat(rootStyles.getPropertyValue('--lift-bottom')) || 8);
-
-  const stepX = Math.max(34, Math.round(cardW * 0.38));
-  const stepY = Math.max(92, Math.round(cardShellH * 0.78));
-  const availableWidth = Math.max(cardW, wrapEl.clientWidth || pileEl.clientWidth || 0);
-  const fitPerRow = Math.max(1, Math.floor((availableWidth - cardW) / stepX) + 1);
-  const perRow = Math.max(1, Math.min(6, fitPerRow));
+  const perRow = 3;
+  const stepX = 62;
+  const stepY = 46;
   const rows = Math.ceil(cards.length / perRow);
   const cols = Math.min(perRow, cards.length);
-
-  pileEl.style.width = `${cardW + (cols - 1) * stepX}px`;
-  pileEl.style.height = `${cardShellH + (rows - 1) * stepY}px`;
+  pileEl.style.width = `${62 * (cols - 1) + 80}px`;
+  pileEl.style.height = `${46 * (rows - 1) + 111}px`;
 
   cards.forEach((rawCard, index) => {
     const cardEl = createCardElement(rawCard, { extraClasses: ['point-stack-card'] });
@@ -404,7 +395,7 @@ function renderPointCardPile(side, cards, pileEl, wrapEl) {
     const row = Math.floor(index / perRow);
     cardEl.style.left = `${col * stepX}px`;
     cardEl.style.top = `${row * stepY}px`;
-    cardEl.style.zIndex = String(row * 100 + col + 1);
+    cardEl.style.zIndex = String(index + 1);
     pileEl.appendChild(cardEl);
   });
 }
@@ -638,14 +629,15 @@ function faceFieldSvg(card) {
   const jewel = card.rank === 11 ? '◆' : card.rank === 12 ? '●' : '♢';
   const wingFill = card.suitFill === '#1c1c1c' ? '#d7d0c1' : '#e3d2d2';
   return `
-    <polygon points="34,47 66,47 73,54 73,86 66,93 34,93 27,86 27,54" fill="#fbf4e7" stroke="#d7cebb" stroke-width="1.6"/>
-    <line x1="36" y1="60" x2="64" y2="60" stroke="#d8cdb9" stroke-width="1.5"/>
-    <line x1="36" y1="80" x2="64" y2="80" stroke="#d8cdb9" stroke-width="1.5"/>
-    <polygon points="27,70 34,57 34,83" fill="${wingFill}"/>
-    <polygon points="73,70 66,57 66,83" fill="${wingFill}"/>
-    ${svgText({ x: 50, y: 54, text: card.suitText, fill: card.suitFill, size: 12.8, weight: 700, family: 'Georgia, Times New Roman, serif' })}
-    ${svgText({ x: 50, y: 69, text: emblem, fill: '#b88928', size: 18.8, weight: 700, family: 'Georgia, Times New Roman, serif' })}
-    ${svgText({ x: 50, y: 84, text: jewel, fill: card.suitFill, size: 13.6, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    <polygon points="28,34 72,34 78,40 78,100 72,106 28,106 22,100 22,40" fill="#fbf4e7" stroke="#d7cebb" stroke-width="1.6"/>
+    <line x1="30" y1="49" x2="70" y2="49" stroke="#d8cdb9" stroke-width="1.6"/>
+    <line x1="30" y1="91" x2="70" y2="91" stroke="#d8cdb9" stroke-width="1.6"/>
+    <polygon points="22,70 30,52 30,88" fill="${wingFill}"/>
+    <polygon points="78,70 70,52 70,88" fill="${wingFill}"/>
+    ${svgText({ x: 50, y: 44, text: card.suitText, fill: card.suitFill, size: 15, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 50, y: 65, text: emblem, fill: '#b88928', size: 22, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 50, y: 86, text: jewel, fill: card.suitFill, size: 16, weight: 700, family: 'Georgia, Times New Roman, serif' })}
+    ${svgText({ x: 50, y: 98, text: card.suitText, fill: card.suitFill, size: 15, weight: 700, family: 'Georgia, Times New Roman, serif', rotate: 180 })}
   `;
 }
 
@@ -806,13 +798,6 @@ function blurControls() {
   }
 }
 
-function scrollLogToBottom() {
-  if (!els.log) return;
-  window.requestAnimationFrame(() => {
-    els.log.scrollTop = els.log.scrollHeight;
-  });
-}
-
 function render() {
   const payload = state.payload;
   if (!payload) return;
@@ -823,17 +808,18 @@ function render() {
 
   const scores = currentScores(payload);
   const playableKeys = new Set(payload.playable_card_keys || []);
+  const activeTableMove = !!(payload.last_move && !payload.last_move.is_pass);
   els.status.textContent = `You ${scores.you} · Bot ${scores.bot} · Pot ${scores.pot}`;
   const turnLabel = payload.turn === 'you' ? 'You' : payload.turn === 'bot' ? 'Bot' : 'Game Over';
   els.turn.textContent = `Turn: ${turnLabel} · Hand type: ${payload.hand_type || 'open'}`;
   els.wins.textContent = `Wins - You: ${payload.wins?.you ?? 0} · Bot: ${payload.wins?.bot ?? 0}`;
   els.deckSize.textContent = `${payload.deck_size} card${payload.deck_size === 1 ? '' : 's'}`;
   els.opponentStatus.textContent = `Cards in hand: ${payload.opponent_card_count}`;
-  els.lastMove.textContent = `Last move: ${payload.last_move ? payload.last_move.label : 'None'}`;
+  els.lastMove.textContent = activeTableMove ? '' : `Last move: ${payload.last_move ? payload.last_move.label : 'None'}`;
+  els.lastMove.classList.toggle('condensed-last-move-hidden', activeTableMove);
   els.result.textContent = payload.result || '';
   els.selection.textContent = payload.pending_bot_turn ? '' : selectedMoveText();
   els.log.textContent = (payload.log || []).join('\n');
-  scrollLogToBottom();
 
   els.humanHand.innerHTML = '';
   for (const rawCard of payload.human_hand || []) {
@@ -855,11 +841,12 @@ function render() {
   renderPointCardPiles();
 
   els.tableCards.innerHTML = '';
-  els.tableCards.classList.toggle('empty-state', !(payload.last_move && !payload.last_move.is_pass));
-  if (payload.last_move && !payload.last_move.is_pass) {
+  els.tableCards.classList.toggle('empty-state', !activeTableMove);
+  els.tableCards.classList.toggle('condensed-last-move', activeTableMove);
+  if (activeTableMove) {
     const typeLabel = document.createElement('div');
-    typeLabel.className = 'table-type';
-    typeLabel.textContent = payload.last_move.type.toUpperCase();
+    typeLabel.className = 'table-type condensed-last-move-label';
+    typeLabel.textContent = payload.last_move.label.toUpperCase();
     els.tableCards.appendChild(typeLabel);
     const row = document.createElement('div');
     row.className = 'card-row table-play-row';
