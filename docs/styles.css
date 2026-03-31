@@ -1390,3 +1390,69 @@ select,
     padding-bottom: 3px;
   }
 }
+
+
+/* Desktop sidebar lock: move browser and action log scroll inside a fixed-height sidebar, never resizing the playing surface. */
+@media (min-width: 981px) {
+  .layout {
+    align-items: stretch;
+  }
+
+  .table-panel,
+  .sidebar {
+    max-height: 100%;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .sidebar > * {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .moves {
+    flex: 0 1 238px;
+    min-height: 0;
+    max-height: 238px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+  }
+
+  .log-wrap {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+  }
+
+  .log {
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 1040px) {
+  .moves {
+    flex-basis: 220px;
+    max-height: 220px;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 920px) {
+  .moves {
+    flex-basis: 196px;
+    max-height: 196px;
+  }
+}
