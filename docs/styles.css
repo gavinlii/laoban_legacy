@@ -1697,3 +1697,11 @@ select,
     transform: translateY(6px);
   }
 }
+
+/* Shift won point-card rail slightly left on desktop so it sits more centrally
+   between the hand area and the right edge of the playing surface. */
+@media (min-width: 981px) {
+  .point-rail {
+    transform: translateX(calc(var(--table-axis-shift) * -0.5));
+  }
+}
