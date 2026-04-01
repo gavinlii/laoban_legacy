@@ -1696,7 +1696,7 @@ select,
     transform: translateX(calc(var(--table-axis-shift) * -0.5));
   }
   .sidebar > h2:first-of-type {
-    margin-top: 10px;
+    margin-top: 16px;
   }
   .selection {
     transform: translateY(8px);
