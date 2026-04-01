@@ -1,6 +1,6 @@
 const API_BASE = (window.LAOBAN_API_BASE || '').replace(/\/$/, '');
 const BOT_THINK_MS = 440;
-const COFFEE_URL = window.LAOBAN_COFFEE_URL || 'https://buymeacoffee.com/';
+const COFFEE_URL = window.LAOBAN_COFFEE_URL || 'https://buymeacoffee.com/laoban';
 
 const RANK_LABELS = {11: 'J', 12: 'Q', 13: 'K', 14: 'A', 17: '2', 20: 'SJ', 30: 'BJ'};
 const SUIT_SYMBOLS = {H: '♥', D: '♦', C: '♣', S: '♠'};
@@ -48,7 +48,7 @@ const RULE_SLIDES = [
     title: 'Bombs',
     body: [
       'Bombs can be played at any time and beat all ordinary (non-bomb) plays. Stronger bombs can beat weaker bombs.',
-      'Bomb order is: 5-10-K (mixed suits) < 5-10-K (suited) < four-of-a-kind < both jokers.',
+      'Bomb order is: 5-10-K (mixed suits) < 5-10-K (suited) < four-of-a-kind < both jokers. Within suited 5-10-K and four-of-a-kind bombs, stronger suits beat weaker suits (diamonds < clubs < hearts < spades). For four-of-a-kind bombs, higher ranks beat lower ranks (quad 2s > quad 9s).',
     ],
   },
   {
@@ -415,7 +415,7 @@ function ensureCoffeeButton() {
   button.id = 'coffee-btn';
   button.className = 'coffee-btn';
   button.setAttribute('aria-label', '');
-  button.innerHTML = '<span class="coffee-btn-icon" aria-hidden="true">☕</span><span></span>';
+  button.innerHTML = '<span class="coffee-btn-icon" aria-hidden="true">☕</span>';
   button.addEventListener('click', () => {
     window.open(COFFEE_URL, '_blank', 'noopener,noreferrer');
   });
