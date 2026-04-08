@@ -12,7 +12,7 @@ from policy_loader import load_policy
 from webgame import SessionStore
 
 BASE_DIR = Path(__file__).resolve().parent
-CHECKPOINT_PATH = os.getenv("CHECKPOINT_PATH", str(BASE_DIR / "policy_main.pt"))
+CHECKPOINT_PATH = os.getenv("CHECKPOINT_PATH", str(BASE_DIR / "policy_new.pt"))
 
 policy = load_policy(CHECKPOINT_PATH)
 sessions = SessionStore(policy)
